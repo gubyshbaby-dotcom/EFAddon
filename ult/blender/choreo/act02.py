@@ -20,7 +20,9 @@ from ..poses import (arm_fk, body, flying_back, foot, guard, hand, hand_world, l
 from . import cam
 
 GLASS_ROOF_Z = 13.0
-EDGE_X = 15.3
+EDGE_X = 14.5          # on top of the west glass parapet (blocks at x 14, z 13-14)
+RUN_Z = 15.0
+ROOF_X = 15.8          # just inside the parapet, on the roof itself
 PINK_FACE_X = -29.0
 IMPACT = Vector((-29.25, -6.0, 4.0))
 
@@ -47,10 +49,10 @@ def stage(cast):
 # --------------------------------------------------------------------------- S013
 FLIGHT = [
     (327, Vector((0.0, -8.55, 0.1))),
-    (330, Vector((-3.6, -9.3, 2.8))),
-    (333, Vector((-9.9, -10.1, 7.1))),
-    (336, Vector((-13.0, -10.2, 8.4))),
-    (342, Vector((-15.5, -9.6, 8.6))),
+    (330, Vector((-4.5, -9.6, 3.2))),
+    (333, Vector((-11.0, -11.3, 7.6))),
+    (336, Vector((-14.5, -11.5, 8.6))),
+    (342, Vector((-17.0, -10.5, 8.8))),
     (352, Vector((-19.8, -8.0, 7.1))),
     (361, Vector((-24.6, -7.0, 5.9))),
     (365, Vector((-26.9, -6.5, 5.0))),
@@ -86,10 +88,10 @@ def s013(Y, I):
         Y.place(f, p, -90.0, ease="lin" if f > 330 else "out")
     Y.key(hit + 1, ease="out5", **flying_back(tumble=20))
     Y.key(hit + 1, head=(40, 10, 20))
-    c = cam("S013", lens=24)
-    tgt = fixed(Vector((-0.6, -9.4, 0.8)))
-    c.key(306, eye=fixed((-12.4, -10.6, 9.3)), target=tgt)
-    c.key(341, eye=fixed((-12.2, -10.5, 9.2)), target=fixed(Vector((-1.2, -9.4, 1.0))), ease="lin")
+    c = cam("S013", lens=22)
+    tgt = fixed(Vector((-0.6, -7.5, 0.5)))
+    c.key(306, eye=fixed((-13.5, -12.5, 9.5)), target=tgt)
+    c.key(341, eye=fixed((-13.3, -12.4, 9.4)), target=fixed(Vector((-1.0, -7.6, 0.6))), ease="lin")
     strike = ip + Vector((0.0, 0.45, 1.25))
     fx.burst("S013-burst", strike, 311, 318, radius=1.1, color=(0.35, 0.9, 1.0), strength=2.5)
     fx.ring("S013-ring", ip + Vector((0.0, 0.0, 1.0)), (0, 0, 1), 312, 340, r0=0.2, r1=1.6,
@@ -147,13 +149,13 @@ def s016(Y, I):
 # --------------------------------------------------------------------------- S017/S018
 def s017(Y, I):
     """386-403: tilted wide, running the glass roof edge."""
-    Y.place(386, Vector((EDGE_X, -10.2, GLASS_ROOF_Z)), 0.0)
-    Y.place(403, Vector((EDGE_X, -3.2, GLASS_ROOF_Z)), 0.0, ease="lin")
+    Y.place(386, Vector((EDGE_X, -10.2, RUN_Z)), 0.0)
+    Y.place(403, Vector((EDGE_X, -3.2, RUN_Z)), 0.0, ease="lin")
     Y.key(386, ease="step", torso=(6, 0, 0), chest=(4, 0, 0), head=(-10, 0, 0), tool_R=(0, 0, 0))
     run_cycle(Y, 386, 404, stride_frames=10, lean=20, arms="pump")
     c = cam("S017", lens=30)
-    c.key(386, eye=fixed((7.4, -17.5, 17.8)), target=fixed((EDGE_X, -7.2, GLASS_ROOF_Z + 0.9)), roll=18)
-    c.key(403, eye=fixed((7.6, -16.8, 17.8)), target=fixed((EDGE_X, -4.5, GLASS_ROOF_Z + 0.9)), roll=18,
+    c.key(386, eye=fixed((9.0, -15.5, 20.5)), target=fixed((EDGE_X, -7.2, RUN_Z + 0.9)), roll=18)
+    c.key(403, eye=fixed((9.2, -14.8, 20.5)), target=fixed((EDGE_X, -4.5, RUN_Z + 0.9)), roll=18,
           ease="lin")
     # Ishigori has come round to the atrium roof to the north, and loads the blast
     I.place(386, BEAM_FROM_FEET, -90.0)
@@ -165,13 +167,13 @@ def s017(Y, I):
 
 BEAM_FROM_FEET = Vector((-31.5, -7.5, 9.0))
 BEAM_FROM = BEAM_FROM_FEET + Vector((0.55, 0.0, 1.2))
-BEAM_PASS = Vector((16.3, -6.2, 14.6))
+BEAM_PASS = Vector((16.3, -6.2, 16.3))
 
 
 def s018(Y, I):
     """404-425: arms out on the edge; the Granite Blast tears past just behind him."""
-    Y.place(404, Vector((EDGE_X, -3.2, GLASS_ROOF_Z)), 0.0)
-    Y.place(425, Vector((EDGE_X, 2.4, GLASS_ROOF_Z)), 0.0, ease="out")
+    Y.place(404, Vector((EDGE_X, -3.2, RUN_Z)), 0.0)
+    Y.place(425, Vector((EDGE_X, 2.4, RUN_Z)), 0.0, ease="out")
     run_cycle(Y, 404, 425, stride_frames=12, lean=10, arms="spread", phase=1)
     # the blast goes past at 406: he ducks away from it and staggers
     Y.key(407, ease="out3", chest=(10, 14, -8), head=(-6, 10, -25))
@@ -185,8 +187,8 @@ def s018(Y, I):
     fx.beam("S018-blast", BEAM_FROM, far, 404, 407, 440, width=1.0, f_fade=430)
     c = cam("S018", lens=30)
     chest = follow(Y, "chest")
-    c.key(404, eye=lambda f: chest(f) + Vector((-0.95, 2.55, 0.15)), target=chest)
-    c.key(425, eye=lambda f: chest(f) + Vector((-0.8, 2.2, 0.12)), target=chest, ease="lin")
+    c.key(404, eye=lambda f: chest(f) + Vector((0.55, 2.6, 0.2)), target=chest)
+    c.key(425, eye=lambda f: chest(f) + Vector((0.45, 2.25, 0.18)), target=chest, ease="lin")
     fx.impact(406, BEAM_PASS, strength=1.0, cam=c)
     fx.flash(c, [(406, 0.75), (407, 0.45), (408, 0.2), (409, 0.0)], color=(0.8, 0.95, 1.0))
 
@@ -207,14 +209,14 @@ def s019(Y, I):
           ease="lin")
 
 
-LEAP = [(438, Vector((7.0, -1.5, 18.0))), (446, Vector((10.6, 0.4, 16.8))),
-        (453, Vector((13.2, 1.6, 15.6))), (459, Vector((14.5, 2.2, 14.5))),
-        (461, Vector((14.9, 2.4, 14.0)))]
+LEAP = [(438, Vector((6.5, -1.5, 20.0))), (446, Vector((10.2, 0.4, 18.8))),
+        (453, Vector((12.7, 1.6, 17.6))), (459, Vector((13.8, 2.2, 16.5))),
+        (461, Vector((14.2, 2.4, 16.0)))]
 
 
 def s020(Y, I):
     """438-459: Ishigori in the air coming at him, fist cocked; the fist into the lens."""
-    ypos = Vector((EDGE_X, 2.4, GLASS_ROOF_Z))
+    ypos = Vector((EDGE_X, 2.4, RUN_Z))
     for f, p in LEAP:
         I.place(f, p, yaw_to(p, ypos), ease="step" if f == 438 else "lin")
     I.key(438, ease="step", hips=(0.0, 0.0, 0.8), body=body(-8, 0, 12), chest=(-6, 0, -10),
@@ -250,14 +252,14 @@ def s020(Y, I):
 # --------------------------------------------------------------------------- S022/S023
 def s022(Y, I):
     """460-471: from the side, he's driven into the roof and it erupts."""
-    roof = Vector((EDGE_X + 0.3, 2.9, GLASS_ROOF_Z))
+    roof = Vector((ROOF_X, 2.9, GLASS_ROOF_Z))
     Y.key(460, ease="out5", hips=(0.0, -0.1, 0.62), body=body(-34, 0, 0), chest=(-16, 0, 0),
           head=(26, 0, 0), arm_R=arm_fk("R", 0.8, 0.2, -0.7, 30), arm_L=arm_fk("L", 0.8, 0.3, -0.6, 40),
           leg_R=foot("R", 0.2, 0.2), leg_L=foot("L", 0.2, 0.35))
     Y.key(464, ease="io", hips=(0.0, -0.25, 0.4), body=body(-60, 0, 0))
-    Y.place(460, Vector((EDGE_X, 2.4, GLASS_ROOF_Z)), 0.0)
-    Y.place(465, Vector((EDGE_X, 2.6, GLASS_ROOF_Z - 0.4)), 0.0, ease="in")
-    Y.place(471, Vector((EDGE_X, 2.7, GLASS_ROOF_Z - 3.5)), 0.0, ease="in")
+    Y.place(460, Vector((EDGE_X, 2.4, RUN_Z)), 0.0)
+    Y.place(465, Vector((ROOF_X, 2.6, GLASS_ROOF_Z - 0.4)), 0.0, ease="in")
+    Y.place(471, Vector((ROOF_X, 2.7, GLASS_ROOF_Z - 3.5)), 0.0, ease="in")
     I.place(461, LEAP[-1][1], -90.0, ease="step")
     I.place(465, roof + Vector((0.2, 0.6, 1.0)), -90.0, ease="in")
     I.place(471, roof + Vector((0.2, 0.7, -2.2)), -90.0, ease="in")
@@ -265,12 +267,12 @@ def s022(Y, I):
           arm_R=arm_fk("R", 0.15, 0.7, 0.75, 5), arm_L=arm_fk("L", 0.9, -0.1, 0.1, 30),
           leg_R=leg_fk("R", 0.1, -0.6, 0.8, 40), leg_L=leg_fk("L", 0.15, -0.3, 0.9, 70))
     c = cam("S022", lens=28)
-    c.key(460, eye=fixed((6.0, 14.0, 16.5)), target=fixed(roof + Vector((0.0, 0.0, 0.8))))
-    c.key(471, eye=fixed((6.2, 14.1, 16.3)), target=fixed(roof + Vector((0.0, 0.0, 0.2))), ease="lin")
+    c.key(460, eye=fixed((7.0, 13.0, 19.5)), target=fixed(roof + Vector((0.0, 0.0, 0.8))))
+    c.key(471, eye=fixed((7.2, 13.1, 19.3)), target=fixed(roof + Vector((0.0, 0.0, 0.2))), ease="lin")
     fx.impact(465, roof, strength=2.0, cam=c, hitstop=0)
     fx.flash(c, [(465, 0.7), (466, 0.35), (467, 0.0)])
-    fx.debris("S022-roof", roof + Vector((0.0, 0.0, 0.1)), 465, count=30, speed=0.32,
-              direction=(0, 0, 1), cone=0.9, size=0.45, life=30, color=(0.08, 0.09, 0.12), seed=22)
+    fx.debris("S022-roof", roof + Vector((0.0, 0.0, 0.1)), 465, count=40, speed=0.42,
+              direction=(0, 0, 1), cone=0.9, size=0.8, life=30, color=(0.08, 0.09, 0.12), seed=22)
     fx.debris("S022-glass", roof + Vector((0.0, 0.0, 0.1)), 465, count=16, speed=0.25,
               direction=(-0.4, 0, 1), cone=1.0, size=0.25, life=26, color=(0.6, 0.75, 0.9), seed=23)
     fx.dust("S022-dust", roof, 466, count=12, spread=3.0, size=1.4, direction=(0, 0, 1),
@@ -279,8 +281,8 @@ def s022(Y, I):
 
 def s023(Y, I):
     """472-489: the west facade; cracks race down floor after floor."""
-    Y.place(472, Vector((EDGE_X + 1.0, 2.6, -3.9)), 0.0)
-    I.place(472, Vector((EDGE_X + 1.3, 3.2, -2.5)), -90.0)
+    Y.place(472, Vector((ROOF_X + 0.2, 2.6, -3.9)), 0.0)
+    I.place(472, Vector((ROOF_X + 0.5, 3.2, -2.5)), -90.0)
     c = cam("S023", lens=32)
     c.key(472, eye=fixed((-5.5, 1.0, 5.2)), target=fixed((14.0, 0.5, 4.2)))
     c.key(489, eye=fixed((-5.5, 1.0, 5.1)), target=fixed((14.0, 0.5, 4.0)), ease="lin")

@@ -274,8 +274,8 @@ def s008(Y, I):
     I.place(136, I0 + Vector((0.0, 0.62, 0.0)), ISHI_YAW, ease="io")
     I.key(144, ease="io", hips=(0.0, 0.2, 0.58))
     c = cam("S008", lens=22)
-    c.key(130, eye=fixed((-0.5, 2.05, 0.1)), target=fixed((0.2, -0.45, 0.16)))
-    c.key(149, eye=fixed((-0.5, 2.2, 0.1)), target=fixed((0.2, -0.35, 0.14)), ease="lin")
+    c.key(130, eye=fixed((-0.95, 1.85, 0.1)), target=fixed((0.25, -0.35, 0.16)))
+    c.key(149, eye=fixed((-0.95, 2.0, 0.1)), target=fixed((0.25, -0.25, 0.14)), ease="lin")
     stomp = Vector((0.2, -0.2, 0.02))
     fx.impact(134, stomp, strength=0.6, cam=c)
     fx.dust("S008-dust", stomp, 134, count=8, spread=0.9, size=0.35, direction=(0, 0, 1),

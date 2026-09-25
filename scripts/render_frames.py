@@ -41,13 +41,15 @@ sc.render.resolution_y = res * 9 // 16
 if engine == "CYCLES":
     sc.render.engine = "CYCLES"
     sc.cycles.device = "CPU"
-    sc.cycles.samples = 8
-    sc.cycles.use_denoising = False
+    sc.cycles.samples = 12
+    sc.cycles.use_denoising = True
+    sc.cycles.denoiser = "OPENIMAGEDENOISE"
     sc.cycles.max_bounces = 2
 elif engine == "WORKBENCH":
     sc.render.engine = "BLENDER_WORKBENCH"
     sc.display.shading.light = "STUDIO"
     sc.display.shading.color_type = "TEXTURE"
+    sc.display.shading.light = "STUDIO"
     sc.display.shading.show_shadows = True
 os.makedirs(out, exist_ok=True)
 if hide_fx and "FX" in bpy.data.collections:

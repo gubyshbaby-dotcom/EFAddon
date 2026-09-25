@@ -720,13 +720,13 @@ class _Builder:
         d = np.sqrt(rp ** 2 + dz ** 2)
         shell = (d <= DOME_R) & (d > DOME_R - 1.2) & (dz > 0)
         # geodesic look: a triangle lattice in plan (three families of lines at 120
-        # degrees, 5.2 apart) dropped vertically onto the dome, plus two rings of latitude
+        # degrees, `step` apart) dropped vertically onto the dome, plus one ring
         px, py = X + 0.5 - cx, Y + 0.5 - cy
-        lines = np.zeros(shell.shape, dtype=bool)
+        step = 7.0
+        lines = Z == int(cz) + 4
         for ang in (90, 210, 330):
-            u = (px * math.cos(math.radians(ang)) + py * math.sin(math.radians(ang))) / 5.2
-            lines |= np.abs(u - np.round(u)) * 5.2 < 0.5
-        lines |= np.isin(Z, (int(cz) + 3, int(cz) + 7))
+            u = (px * math.cos(math.radians(ang)) + py * math.sin(math.radians(ang))) / step
+            lines |= np.abs(u - np.round(u)) * step < 0.5
         a[shell] = self.id("white_concrete")
         a[shell & lines] = self.id("light_gray_concrete")
         self.paint(x0, y0, x1, y1, SIDEWALK)
