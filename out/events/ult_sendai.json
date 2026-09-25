@@ -1,0 +1,1475 @@
+{
+ "format": "ult-events/1",
+ "name": "ult_sendai",
+ "fps": 30,
+ "frame": "vix rig: x forward, y up, z right of the caster at t=0",
+ "events": [
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 1.0,
+   "time": 1.1,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 1.0,
+   "time": 1.1333,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 1.0,
+   "time": 1.1667,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.75,
+   "time": 1.2,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.5,
+   "time": 1.2333,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.3,
+   "time": 1.2667,
+   "duration": 0.0333
+  },
+  {
+   "type": "speed_lines",
+   "radial": false,
+   "time": 1.2667,
+   "duration": 0.5333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.15,
+   "time": 1.3,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.0,
+   "time": 1.3333,
+   "duration": 0.0333
+  },
+  {
+   "type": "speed_lines",
+   "radial": false,
+   "time": 1.8,
+   "duration": 0.1333
+  },
+  {
+   "type": "impact",
+   "pos": [
+    0.8793,
+    1.6637,
+    0.1009
+   ],
+   "strength": 1.0,
+   "hitstop_frames": 3,
+   "time": 1.8
+  },
+  {
+   "type": "camera_shake",
+   "strength": 1.0,
+   "time": 1.8,
+   "duration": 0.5333
+  },
+  {
+   "type": "particles",
+   "kind": "debris",
+   "pos": [
+    0.8793,
+    1.6637,
+    0.1009
+   ],
+   "count": 6,
+   "speed": 0.05,
+   "direction": [
+    0.0,
+    0.1961,
+    -0.9806
+   ],
+   "time": 1.8,
+   "duration": 0.4
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.95,
+   "time": 2.6667,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.85,
+   "time": 2.7,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.5,
+   "time": 2.7333,
+   "duration": 0.0333
+  },
+  {
+   "type": "impact",
+   "pos": [
+    0.1672,
+    1.6754,
+    -0.2624
+   ],
+   "strength": 2.0,
+   "hitstop_frames": 0,
+   "time": 2.7333
+  },
+  {
+   "type": "camera_shake",
+   "strength": 2.0,
+   "time": 2.7333,
+   "duration": 0.8667
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.35,
+   "time": 2.7667,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "alpha": 0.7,
+   "time": 2.8,
+   "duration": 0.0333
+  },
+  {
+   "type": "particles",
+   "kind": "blood",
+   "pos": [
+    0.016,
+    1.5338,
+    0.0623
+   ],
+   "count": 10,
+   "direction": [
+    -0.9129,
+    0.3651,
+    0.1826
+   ],
+   "time": 2.8,
+   "duration": 0.6
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "alpha": 0.72,
+   "time": 2.8333,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "alpha": 0.65,
+   "time": 2.8667,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "alpha": 0.0,
+   "time": 2.9,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.95,
+   "time": 2.9333,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.8,
+   "time": 2.9667,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.45,
+   "time": 3.0,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.3,
+   "time": 3.0333,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "alpha": 0.72,
+   "time": 3.0667,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "alpha": 0.72,
+   "time": 3.1,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "alpha": 0.65,
+   "time": 3.1333,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.95,
+   "time": 3.1667,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.75,
+   "time": 3.2,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.4,
+   "time": 3.2333,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.3,
+   "time": 3.2667,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "alpha": 0.7,
+   "time": 3.3,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "alpha": 0.72,
+   "time": 3.3333,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "alpha": 0.72,
+   "time": 3.3667,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "alpha": 0.6,
+   "time": 3.4,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "alpha": 0.0,
+   "time": 3.4333,
+   "duration": 0.0333
+  },
+  {
+   "type": "speed_lines",
+   "radial": false,
+   "time": 3.4667,
+   "duration": 0.3333
+  },
+  {
+   "type": "speed_lines",
+   "radial": false,
+   "time": 3.8,
+   "duration": 0.2667
+  },
+  {
+   "type": "impact",
+   "pos": [
+    0.9654,
+    1.6678,
+    -0.2569
+   ],
+   "strength": 1.0,
+   "hitstop_frames": 2,
+   "time": 3.8
+  },
+  {
+   "type": "camera_shake",
+   "strength": 1.0,
+   "time": 3.8,
+   "duration": 0.5333
+  },
+  {
+   "type": "speed_lines",
+   "radial": false,
+   "time": 4.0667,
+   "duration": 0.2667
+  },
+  {
+   "type": "impact",
+   "pos": [
+    0.4243,
+    1.6486,
+    0.2495
+   ],
+   "strength": 1.3,
+   "hitstop_frames": 2,
+   "time": 4.0667
+  },
+  {
+   "type": "camera_shake",
+   "strength": 1.3,
+   "time": 4.0667,
+   "duration": 0.6333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.6,
+   "time": 4.0667,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.25,
+   "time": 4.1,
+   "duration": 0.0333
+  },
+  {
+   "type": "particles",
+   "kind": "blood",
+   "pos": [
+    -0.2449,
+    1.436,
+    0.04
+   ],
+   "count": 8,
+   "direction": [
+    -0.3578,
+    0.2683,
+    -0.8944
+   ],
+   "time": 4.1,
+   "duration": 0.5333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.0,
+   "time": 4.1333,
+   "duration": 0.0333
+  },
+  {
+   "type": "impact",
+   "pos": [
+    0.2,
+    0.02,
+    -0.2
+   ],
+   "strength": 0.6,
+   "hitstop_frames": 0,
+   "time": 4.4667
+  },
+  {
+   "type": "camera_shake",
+   "strength": 0.6,
+   "time": 4.4667,
+   "duration": 0.4
+  },
+  {
+   "type": "particles",
+   "kind": "dust",
+   "pos": [
+    0.2,
+    0.02,
+    -0.2
+   ],
+   "count": 8,
+   "spread": 0.9,
+   "direction": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "time": 4.4667,
+   "duration": 0.6
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 1.0,
+   "time": 6.4667,
+   "duration": 0.0333
+  },
+  {
+   "type": "impact",
+   "pos": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "strength": 1.4,
+   "hitstop_frames": 0,
+   "time": 6.4667
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 1.0,
+   "time": 6.5,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.85,
+    0.95,
+    1.0
+   ],
+   "alpha": 0.8,
+   "time": 6.5333,
+   "duration": 0.0333
+  },
+  {
+   "type": "lightning",
+   "start": [
+    -3.1022,
+    0.05,
+    4.0655
+   ],
+   "end": [
+    -1.0746,
+    0.8918,
+    0.175
+   ],
+   "color": [
+    1.0,
+    0.45,
+    0.85
+   ],
+   "time": 6.5333,
+   "duration": 2.2
+  },
+  {
+   "type": "lightning",
+   "start": [
+    0.6114,
+    0.05,
+    -4.8027
+   ],
+   "end": [
+    -0.7876,
+    0.3126,
+    0.1456
+   ],
+   "color": [
+    0.35,
+    0.85,
+    1.0
+   ],
+   "time": 6.5333,
+   "duration": 2.2
+  },
+  {
+   "type": "lightning",
+   "start": [
+    -6.4119,
+    0.05,
+    3.4673
+   ],
+   "end": [
+    -0.9967,
+    0.4832,
+    -0.3868
+   ],
+   "color": [
+    0.35,
+    0.85,
+    1.0
+   ],
+   "time": 6.5333,
+   "duration": 2.2
+  },
+  {
+   "type": "lightning",
+   "start": [
+    5.2915,
+    0.05,
+    -0.9354
+   ],
+   "end": [
+    -0.7711,
+    0.1508,
+    0.3937
+   ],
+   "color": [
+    1.0,
+    0.45,
+    0.85
+   ],
+   "time": 6.5333,
+   "duration": 2.2
+  },
+  {
+   "type": "lightning",
+   "start": [
+    -4.7746,
+    0.05,
+    -2.0933
+   ],
+   "end": [
+    -0.5727,
+    0.4598,
+    -0.0837
+   ],
+   "color": [
+    0.35,
+    0.85,
+    1.0
+   ],
+   "time": 6.5333,
+   "duration": 2.2
+  },
+  {
+   "type": "lightning",
+   "start": [
+    -2.2455,
+    0.02,
+    -0.5886
+   ],
+   "end": [
+    -0.9863,
+    1.5347,
+    0.2794
+   ],
+   "color": [
+    0.35,
+    0.85,
+    1.0
+   ],
+   "time": 6.5333,
+   "duration": 2.2
+  },
+  {
+   "type": "lightning",
+   "start": [
+    0.1692,
+    0.02,
+    -0.2442
+   ],
+   "end": [
+    -0.6396,
+    0.9586,
+    0.2805
+   ],
+   "color": [
+    1.0,
+    0.45,
+    0.85
+   ],
+   "time": 6.5333,
+   "duration": 2.2
+  },
+  {
+   "type": "lightning",
+   "start": [
+    -1.826,
+    0.02,
+    -0.4965
+   ],
+   "end": [
+    -0.7173,
+    0.7311,
+    -0.189
+   ],
+   "color": [
+    0.35,
+    0.85,
+    1.0
+   ],
+   "time": 6.5333,
+   "duration": 2.2
+  },
+  {
+   "type": "lightning",
+   "start": [
+    -1.4016,
+    0.02,
+    0.601
+   ],
+   "end": [
+    -0.9758,
+    1.5282,
+    -0.1691
+   ],
+   "color": [
+    0.35,
+    0.85,
+    1.0
+   ],
+   "time": 6.5333,
+   "duration": 2.2
+  },
+  {
+   "type": "lightning",
+   "start": [
+    -0.1863,
+    0.02,
+    1.0114
+   ],
+   "end": [
+    -0.7941,
+    0.7651,
+    0.2479
+   ],
+   "color": [
+    1.0,
+    0.45,
+    0.85
+   ],
+   "time": 6.5333,
+   "duration": 2.2
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.8,
+    0.9,
+    1.0
+   ],
+   "alpha": 0.6,
+   "time": 6.5667,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.9,
+    0.8,
+    1.0
+   ],
+   "alpha": 0.35,
+   "time": 6.6,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.9,
+    0.8,
+    1.0
+   ],
+   "alpha": 0.15,
+   "time": 6.6333,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.0,
+   "time": 6.6667,
+   "duration": 0.0333
+  },
+  {
+   "type": "lightning",
+   "start": [
+    3.0,
+    5.5,
+    5.5
+   ],
+   "end": [
+    0.0,
+    0.0,
+    -1.5
+   ],
+   "color": [
+    0.35,
+    0.85,
+    1.0
+   ],
+   "time": 6.7,
+   "duration": 0.2
+  },
+  {
+   "type": "lightning",
+   "start": [
+    0.8,
+    6.8,
+    3.6
+   ],
+   "end": [
+    1.5,
+    0.0,
+    1.2
+   ],
+   "color": [
+    0.35,
+    0.85,
+    1.0
+   ],
+   "time": 7.6,
+   "duration": 0.2
+  },
+  {
+   "type": "lightning",
+   "start": [
+    -0.9,
+    1.3,
+    -0.1
+   ],
+   "end": [
+    0.5,
+    0.0,
+    -0.2
+   ],
+   "color": [
+    1.0,
+    0.45,
+    0.85
+   ],
+   "time": 7.9,
+   "duration": 0.2333
+  },
+  {
+   "type": "lightning",
+   "start": [
+    -0.5,
+    0.2,
+    -6.5
+   ],
+   "end": [
+    -0.7,
+    0.5,
+    0.2
+   ],
+   "color": [
+    0.35,
+    0.85,
+    1.0
+   ],
+   "time": 8.3333,
+   "duration": 0.2667
+  },
+  {
+   "type": "lightning",
+   "start": [
+    -0.0746,
+    0.884,
+    -0.9
+   ],
+   "end": [
+    0.0254,
+    1.584,
+    0.8
+   ],
+   "color": [
+    0.35,
+    0.85,
+    1.0
+   ],
+   "time": 8.7333,
+   "duration": 1.2
+  },
+  {
+   "type": "lightning",
+   "start": [
+    -0.3746,
+    0.884,
+    -0.9
+   ],
+   "end": [
+    -0.2746,
+    1.584,
+    0.8
+   ],
+   "color": [
+    1.0,
+    0.45,
+    0.85
+   ],
+   "time": 8.7333,
+   "duration": 1.2
+  },
+  {
+   "type": "lightning",
+   "start": [
+    -0.5446,
+    0.884,
+    -0.9
+   ],
+   "end": [
+    -0.4446,
+    1.584,
+    0.8
+   ],
+   "color": [
+    0.35,
+    0.85,
+    1.0
+   ],
+   "time": 8.7333,
+   "duration": 1.2
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.45,
+    0.85,
+    1.0
+   ],
+   "alpha": 0.9,
+   "time": 10.1,
+   "duration": 0.0333
+  },
+  {
+   "type": "impact",
+   "pos": [
+    9.0429,
+    1.2841,
+    0.005
+   ],
+   "strength": 1.8,
+   "hitstop_frames": 0,
+   "time": 10.1
+  },
+  {
+   "type": "camera_shake",
+   "strength": 1.8,
+   "time": 10.1,
+   "duration": 0.8
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.45,
+    0.85,
+    1.0
+   ],
+   "alpha": 0.75,
+   "time": 10.1333,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.45,
+    0.85,
+    1.0
+   ],
+   "alpha": 0.4,
+   "time": 10.1667,
+   "duration": 0.0333
+  },
+  {
+   "type": "burst",
+   "pos": [
+    9.15,
+    1.25,
+    0.0
+   ],
+   "radius": 1.1,
+   "color": [
+    0.35,
+    0.9,
+    1.0
+   ],
+   "time": 10.3667,
+   "duration": 0.2667
+  },
+  {
+   "type": "shock_ring",
+   "pos": [
+    9.6,
+    1.0,
+    0.0
+   ],
+   "normal": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "radius": 1.6,
+   "color": [
+    0.55,
+    1.0,
+    0.85
+   ],
+   "time": 10.4,
+   "duration": 0.9667
+  },
+  {
+   "type": "impact",
+   "pos": [
+    9.15,
+    1.25,
+    0.0
+   ],
+   "strength": 1.2,
+   "hitstop_frames": 0,
+   "time": 10.4
+  },
+  {
+   "type": "camera_shake",
+   "strength": 1.2,
+   "time": 10.4,
+   "duration": 0.6
+  },
+  {
+   "type": "impact",
+   "pos": [
+    9.0924,
+    1.5303,
+    -0.3244
+   ],
+   "strength": 1.6,
+   "hitstop_frames": 0,
+   "time": 10.8667
+  },
+  {
+   "type": "camera_shake",
+   "strength": 1.6,
+   "time": 10.8667,
+   "duration": 0.7333
+  },
+  {
+   "type": "particles",
+   "kind": "dust",
+   "pos": [
+    9.1,
+    0.05,
+    0.0
+   ],
+   "count": 8,
+   "spread": 1.4,
+   "direction": [
+    -0.0,
+    0.3714,
+    0.9285
+   ],
+   "time": 10.8667,
+   "duration": 0.6667
+  },
+  {
+   "type": "speed_lines",
+   "radial": false,
+   "time": 11.4,
+   "duration": 0.6667
+  },
+  {
+   "type": "particles",
+   "kind": "blood",
+   "pos": [
+    8.2815,
+    8.5266,
+    19.6639
+   ],
+   "count": 9,
+   "direction": [
+    -0.2491,
+    0.4983,
+    -0.8305
+   ],
+   "time": 11.6667,
+   "duration": 0.5333
+  },
+  {
+   "type": "impact",
+   "pos": [
+    6.0,
+    4.0,
+    29.25
+   ],
+   "strength": 1.5,
+   "hitstop_frames": 2,
+   "time": 12.3333
+  },
+  {
+   "type": "camera_shake",
+   "strength": 1.5,
+   "time": 12.3333,
+   "duration": 0.7
+  },
+  {
+   "type": "particles",
+   "kind": "dust",
+   "pos": [
+    6.0,
+    4.2,
+    28.85
+   ],
+   "count": 20,
+   "spread": 5.0,
+   "direction": [
+    -0.0891,
+    0.4454,
+    -0.8909
+   ],
+   "time": 12.3333,
+   "duration": 1.1333
+  },
+  {
+   "type": "particles",
+   "kind": "debris",
+   "pos": [
+    6.0,
+    4.0,
+    28.95
+   ],
+   "count": 18,
+   "speed": 0.3,
+   "direction": [
+    0.0,
+    0.3304,
+    -0.9439
+   ],
+   "time": 12.3333,
+   "duration": 1.2
+  },
+  {
+   "type": "beam",
+   "start": [
+    7.5,
+    10.2,
+    30.95
+   ],
+   "end": [
+    3.6,
+    23.4,
+    -110.8
+   ],
+   "width": 1.0,
+   "color": [
+    0.35,
+    0.85,
+    1.0
+   ],
+   "grow_frames": 3,
+   "time": 13.4667,
+   "duration": 1.2333
+  },
+  {
+   "type": "impact",
+   "pos": [
+    6.2,
+    14.6,
+    -16.3
+   ],
+   "strength": 1.0,
+   "hitstop_frames": 0,
+   "time": 13.5333
+  },
+  {
+   "type": "camera_shake",
+   "strength": 1.0,
+   "time": 13.5333,
+   "duration": 0.5333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.8,
+    0.95,
+    1.0
+   ],
+   "alpha": 0.75,
+   "time": 13.5333,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.8,
+    0.95,
+    1.0
+   ],
+   "alpha": 0.45,
+   "time": 13.5667,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.8,
+    0.95,
+    1.0
+   ],
+   "alpha": 0.2,
+   "time": 13.6,
+   "duration": 0.0333
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    0.8,
+    0.95,
+    1.0
+   ],
+   "alpha": 0.0,
+   "time": 13.6333,
+   "duration": 0.0333
+  },
+  {
+   "type": "speed_lines",
+   "radial": true,
+   "time": 14.6,
+   "duration": 0.5333
+  },
+  {
+   "type": "impact",
+   "pos": [
+    -2.9,
+    13.0,
+    -15.6
+   ],
+   "strength": 2.0,
+   "hitstop_frames": 0,
+   "time": 15.5
+  },
+  {
+   "type": "camera_shake",
+   "strength": 2.0,
+   "time": 15.5,
+   "duration": 0.8667
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.7,
+   "time": 15.5,
+   "duration": 0.0333
+  },
+  {
+   "type": "particles",
+   "kind": "debris",
+   "pos": [
+    -2.9,
+    13.1,
+    -15.6
+   ],
+   "count": 30,
+   "speed": 0.32,
+   "direction": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "time": 15.5,
+   "duration": 1.0
+  },
+  {
+   "type": "particles",
+   "kind": "debris",
+   "pos": [
+    -2.9,
+    13.1,
+    -15.6
+   ],
+   "count": 16,
+   "speed": 0.25,
+   "direction": [
+    -0.0,
+    0.9285,
+    0.3714
+   ],
+   "time": 15.5,
+   "duration": 0.8667
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.35,
+   "time": 15.5333,
+   "duration": 0.0333
+  },
+  {
+   "type": "particles",
+   "kind": "dust",
+   "pos": [
+    -2.9,
+    13.0,
+    -15.6
+   ],
+   "count": 12,
+   "spread": 3.0,
+   "direction": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "time": 15.5333,
+   "duration": 1.0
+  },
+  {
+   "type": "screen_flash",
+   "color": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "alpha": 0.0,
+   "time": 15.5667,
+   "duration": 0.0333
+  },
+  {
+   "type": "glass_cracks",
+   "pos": [
+    -1.0,
+    12.4,
+    -13.97
+   ],
+   "time": 15.7333,
+   "duration": 0.6
+  },
+  {
+   "type": "impact",
+   "pos": [
+    -2.0,
+    8.0,
+    -14.5
+   ],
+   "strength": 0.6,
+   "hitstop_frames": 0,
+   "time": 15.8
+  },
+  {
+   "type": "camera_shake",
+   "strength": 0.6,
+   "time": 15.8,
+   "duration": 0.4
+  },
+  {
+   "type": "impact",
+   "pos": [
+    -2.0,
+    4.0,
+    -14.5
+   ],
+   "strength": 0.6,
+   "hitstop_frames": 0,
+   "time": 15.9667
+  },
+  {
+   "type": "camera_shake",
+   "strength": 0.6,
+   "time": 15.9667,
+   "duration": 0.4
+  },
+  {
+   "type": "impact",
+   "pos": [
+    -2.0,
+    0.0,
+    -14.5
+   ],
+   "strength": 0.6,
+   "hitstop_frames": 0,
+   "time": 16.1333
+  },
+  {
+   "type": "camera_shake",
+   "strength": 0.6,
+   "time": 16.1333,
+   "duration": 0.4
+  }
+ ]
+}

@@ -1,0 +1,354 @@
+{
+    "format": "efb-vix-shot/1",
+    "name": "ult_sendai",
+    "duration": 16.3,
+    "fps": 30.0,
+    "origin": {
+        "mode": "locked",
+        "object": "Yuta",
+        "lock_org_pos": true,
+        "dynamic_y": false
+    },
+    "cameras": [
+        {
+            "name": "S001",
+            "file": "ult_sendai/S001.json",
+            "start": 0.0,
+            "end": 1.1,
+            "duration": 1.1,
+            "priority": 0
+        },
+        {
+            "name": "S003",
+            "file": "ult_sendai/S003.json",
+            "start": 1.1,
+            "end": 1.8,
+            "duration": 0.7,
+            "priority": 0
+        },
+        {
+            "name": "S004",
+            "file": "ult_sendai/S004.json",
+            "start": 1.8,
+            "end": 1.933333,
+            "duration": 0.133333,
+            "priority": 0
+        },
+        {
+            "name": "S005",
+            "file": "ult_sendai/S005.json",
+            "start": 1.933333,
+            "end": 2.666667,
+            "duration": 0.733333,
+            "priority": 0
+        },
+        {
+            "name": "S006",
+            "file": "ult_sendai/S006.json",
+            "start": 2.666667,
+            "end": 3.466667,
+            "duration": 0.8,
+            "priority": 0
+        },
+        {
+            "name": "S007a",
+            "file": "ult_sendai/S007a.json",
+            "start": 3.466667,
+            "end": 3.8,
+            "duration": 0.333333,
+            "priority": 0
+        },
+        {
+            "name": "S007b",
+            "file": "ult_sendai/S007b.json",
+            "start": 3.8,
+            "end": 4.066667,
+            "duration": 0.266667,
+            "priority": 0
+        },
+        {
+            "name": "S007c",
+            "file": "ult_sendai/S007c.json",
+            "start": 4.066667,
+            "end": 4.333333,
+            "duration": 0.266667,
+            "priority": 0
+        },
+        {
+            "name": "S008",
+            "file": "ult_sendai/S008.json",
+            "start": 4.333333,
+            "end": 5.0,
+            "duration": 0.666667,
+            "priority": 0
+        },
+        {
+            "name": "S009",
+            "file": "ult_sendai/S009.json",
+            "start": 5.0,
+            "end": 6.466667,
+            "duration": 1.466667,
+            "priority": 0
+        },
+        {
+            "name": "S010",
+            "file": "ult_sendai/S010.json",
+            "start": 6.466667,
+            "end": 8.733333,
+            "duration": 2.266667,
+            "priority": 0
+        },
+        {
+            "name": "S011",
+            "file": "ult_sendai/S011.json",
+            "start": 8.733333,
+            "end": 9.933333,
+            "duration": 1.2,
+            "priority": 0
+        },
+        {
+            "name": "S012",
+            "file": "ult_sendai/S012.json",
+            "start": 9.933333,
+            "end": 10.2,
+            "duration": 0.266667,
+            "priority": 0
+        },
+        {
+            "name": "S013",
+            "file": "ult_sendai/S013.json",
+            "start": 10.2,
+            "end": 11.4,
+            "duration": 1.2,
+            "priority": 0
+        },
+        {
+            "name": "S014",
+            "file": "ult_sendai/S014.json",
+            "start": 11.4,
+            "end": 12.066667,
+            "duration": 0.666667,
+            "priority": 0
+        },
+        {
+            "name": "S015",
+            "file": "ult_sendai/S015.json",
+            "start": 12.066667,
+            "end": 12.2,
+            "duration": 0.133333,
+            "priority": 0
+        },
+        {
+            "name": "S016",
+            "file": "ult_sendai/S016.json",
+            "start": 12.2,
+            "end": 12.866667,
+            "duration": 0.666667,
+            "priority": 0
+        },
+        {
+            "name": "S017",
+            "file": "ult_sendai/S017.json",
+            "start": 12.866667,
+            "end": 13.466667,
+            "duration": 0.6,
+            "priority": 0
+        },
+        {
+            "name": "S018",
+            "file": "ult_sendai/S018.json",
+            "start": 13.466667,
+            "end": 14.2,
+            "duration": 0.733333,
+            "priority": 0
+        },
+        {
+            "name": "S019",
+            "file": "ult_sendai/S019.json",
+            "start": 14.2,
+            "end": 14.6,
+            "duration": 0.4,
+            "priority": 0
+        },
+        {
+            "name": "S020",
+            "file": "ult_sendai/S020.json",
+            "start": 14.6,
+            "end": 15.133333,
+            "duration": 0.533333,
+            "priority": 0
+        },
+        {
+            "name": "S021",
+            "file": "ult_sendai/S021.json",
+            "start": 15.133333,
+            "end": 15.333333,
+            "duration": 0.2,
+            "priority": 0
+        },
+        {
+            "name": "S022",
+            "file": "ult_sendai/S022.json",
+            "start": 15.333333,
+            "end": 15.733333,
+            "duration": 0.4,
+            "priority": 0
+        },
+        {
+            "name": "S023",
+            "file": "ult_sendai/S023.json",
+            "start": 15.733333,
+            "end": 16.3,
+            "duration": 0.566667,
+            "priority": 0
+        }
+    ],
+    "timeline": [
+        {
+            "start": 0.0,
+            "end": 1.1,
+            "camera": "S001",
+            "offset": 0.0
+        },
+        {
+            "start": 1.1,
+            "end": 1.8,
+            "camera": "S003",
+            "offset": 0.0
+        },
+        {
+            "start": 1.8,
+            "end": 1.933333,
+            "camera": "S004",
+            "offset": 0.0
+        },
+        {
+            "start": 1.933333,
+            "end": 2.666667,
+            "camera": "S005",
+            "offset": 0.0
+        },
+        {
+            "start": 2.666667,
+            "end": 3.466667,
+            "camera": "S006",
+            "offset": 0.0
+        },
+        {
+            "start": 3.466667,
+            "end": 3.8,
+            "camera": "S007a",
+            "offset": 0.0
+        },
+        {
+            "start": 3.8,
+            "end": 4.066667,
+            "camera": "S007b",
+            "offset": 0.0
+        },
+        {
+            "start": 4.066667,
+            "end": 4.333333,
+            "camera": "S007c",
+            "offset": 0.0
+        },
+        {
+            "start": 4.333333,
+            "end": 5.0,
+            "camera": "S008",
+            "offset": 0.0
+        },
+        {
+            "start": 5.0,
+            "end": 6.466667,
+            "camera": "S009",
+            "offset": 0.0
+        },
+        {
+            "start": 6.466667,
+            "end": 8.733333,
+            "camera": "S010",
+            "offset": 0.0
+        },
+        {
+            "start": 8.733333,
+            "end": 9.933333,
+            "camera": "S011",
+            "offset": 0.0
+        },
+        {
+            "start": 9.933333,
+            "end": 10.2,
+            "camera": "S012",
+            "offset": 0.0
+        },
+        {
+            "start": 10.2,
+            "end": 11.4,
+            "camera": "S013",
+            "offset": 0.0
+        },
+        {
+            "start": 11.4,
+            "end": 12.066667,
+            "camera": "S014",
+            "offset": 0.0
+        },
+        {
+            "start": 12.066667,
+            "end": 12.2,
+            "camera": "S015",
+            "offset": 0.0
+        },
+        {
+            "start": 12.2,
+            "end": 12.866667,
+            "camera": "S016",
+            "offset": 0.0
+        },
+        {
+            "start": 12.866667,
+            "end": 13.466667,
+            "camera": "S017",
+            "offset": 0.0
+        },
+        {
+            "start": 13.466667,
+            "end": 14.2,
+            "camera": "S018",
+            "offset": 0.0
+        },
+        {
+            "start": 14.2,
+            "end": 14.6,
+            "camera": "S019",
+            "offset": 0.0
+        },
+        {
+            "start": 14.6,
+            "end": 15.133333,
+            "camera": "S020",
+            "offset": 0.0
+        },
+        {
+            "start": 15.133333,
+            "end": 15.333333,
+            "camera": "S021",
+            "offset": 0.0
+        },
+        {
+            "start": 15.333333,
+            "end": 15.733333,
+            "camera": "S022",
+            "offset": 0.0
+        },
+        {
+            "start": 15.733333,
+            "end": 16.3,
+            "camera": "S023",
+            "offset": 0.0
+        }
+    ],
+    "gaps": [],
+    "warnings": []
+}

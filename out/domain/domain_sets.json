@@ -1,0 +1,508 @@
+{
+  "turf_center": {
+    "blender": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "normal_blender": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "template": [
+      72.0,
+      72.0,
+      72.0
+    ],
+    "normal_template": [
+      0.0,
+      1.0,
+      -0.0
+    ],
+    "doc": "Caster's start: centre mark of A's turf roof, the world origin."
+  },
+  "turf_shed_front": {
+    "blender": [
+      -3.0,
+      7.0,
+      0.0
+    ],
+    "normal_blender": [
+      0.0,
+      -1.0,
+      0.0
+    ],
+    "template": [
+      69.0,
+      72.0,
+      65.0
+    ],
+    "normal_template": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "doc": "Turf roof right in front of the red shed's south face (door at x -7..-6)."
+  },
+  "turf_south_edge": {
+    "blender": [
+      0.0,
+      -12.0,
+      0.0
+    ],
+    "normal_blender": [
+      0.0,
+      1.0,
+      0.0
+    ],
+    "template": [
+      72.0,
+      72.0,
+      84.0
+    ],
+    "normal_template": [
+      0.0,
+      0.0,
+      -1.0
+    ],
+    "doc": "Turf roof at the inner face of the south parapet, under the fence."
+  },
+  "turf_east_edge": {
+    "blender": [
+      11.0,
+      0.0,
+      0.0
+    ],
+    "normal_blender": [
+      -1.0,
+      0.0,
+      0.0
+    ],
+    "template": [
+      83.0,
+      72.0,
+      72.0
+    ],
+    "normal_template": [
+      -1.0,
+      0.0,
+      -0.0
+    ],
+    "doc": "Turf roof at the inner face of the east parapet, under the fence."
+  },
+  "pink_wall": {
+    "blender": [
+      -29.0,
+      0.0,
+      -7.5
+    ],
+    "normal_blender": [
+      1.0,
+      0.0,
+      0.0
+    ],
+    "template": [
+      43.0,
+      64.5,
+      72.0
+    ],
+    "normal_template": [
+      1.0,
+      0.0,
+      -0.0
+    ],
+    "doc": "B's east face at mid height, between two balcony slabs; normal points east."
+  },
+  "pink_roof": {
+    "blender": [
+      -39.5,
+      0.5,
+      9.0
+    ],
+    "normal_blender": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "template": [
+      32.5,
+      81.0,
+      71.5
+    ],
+    "normal_template": [
+      0.0,
+      1.0,
+      -0.0
+    ],
+    "doc": "Centre of B's roof walking surface."
+  },
+  "glass_roof": {
+    "blender": [
+      24.5,
+      -2.5,
+      13.0
+    ],
+    "normal_blender": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "template": [
+      96.5,
+      85.0,
+      74.5
+    ],
+    "normal_template": [
+      0.0,
+      1.0,
+      -0.0
+    ],
+    "doc": "Centre of C's roof walking surface."
+  },
+  "glass_roof_edge": {
+    "blender": [
+      15.5,
+      -2.5,
+      13.0
+    ],
+    "normal_blender": [
+      -1.0,
+      0.0,
+      0.0
+    ],
+    "template": [
+      87.5,
+      85.0,
+      74.5
+    ],
+    "normal_template": [
+      -1.0,
+      0.0,
+      -0.0
+    ],
+    "doc": "C's roof along its west glass parapet (runs y -11..5); normal points out, west."
+  },
+  "office_floor": {
+    "blender": [
+      24.5,
+      -2.5,
+      -4.0
+    ],
+    "normal_blender": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "template": [
+      96.5,
+      68.0,
+      74.5
+    ],
+    "normal_template": [
+      0.0,
+      1.0,
+      -0.0
+    ],
+    "doc": "Centre of the dark office floor inside C (open 9 x 7 blocks, ceiling at -1)."
+  },
+  "atrium_floor": {
+    "blender": [
+      24.5,
+      18.5,
+      -24.0
+    ],
+    "normal_blender": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "template": [
+      96.5,
+      48.0,
+      53.5
+    ],
+    "normal_template": [
+      0.0,
+      1.0,
+      -0.0
+    ],
+    "doc": "Centre of D's white floor, under the red-beamed glass roof at z -6."
+  },
+  "orange_balcony": {
+    "blender": [
+      -41.5,
+      15.5,
+      -9.0
+    ],
+    "normal_blender": [
+      0.0,
+      -1.0,
+      0.0
+    ],
+    "template": [
+      30.5,
+      63.0,
+      56.5
+    ],
+    "normal_template": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "doc": "On a south balcony of E (slab z -10), behind its white rail."
+  },
+  "slope_roof": {
+    "blender": [
+      -0.5,
+      29.5,
+      -5.0
+    ],
+    "normal_blender": [
+      0.0,
+      -0.4,
+      0.92
+    ],
+    "template": [
+      71.5,
+      67.0,
+      42.5
+    ],
+    "normal_template": [
+      0.0,
+      0.92,
+      0.4
+    ],
+    "doc": "Middle of G's stepped blue roof; normal is the mean slope."
+  },
+  "dome_top": {
+    "blender": [
+      30.5,
+      44.5,
+      -2.0
+    ],
+    "normal_blender": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "template": [
+      102.5,
+      70.0,
+      27.5
+    ],
+    "normal_template": [
+      0.0,
+      1.0,
+      -0.0
+    ],
+    "doc": "Top of F's dome."
+  },
+  "dome_podium": {
+    "blender": [
+      30.5,
+      31.8,
+      -13.0
+    ],
+    "normal_blender": [
+      0.0,
+      -1.0,
+      0.0
+    ],
+    "template": [
+      102.5,
+      59.0,
+      40.2
+    ],
+    "normal_template": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "doc": "F's podium rim, south side, at the foot of the dome."
+  },
+  "street_crossing": {
+    "blender": [
+      -19.5,
+      -19.5,
+      -24.0
+    ],
+    "normal_blender": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "template": [
+      52.5,
+      48.0,
+      91.5
+    ],
+    "normal_template": [
+      0.0,
+      1.0,
+      -0.0
+    ],
+    "doc": "Centre of the junction of the two roads."
+  },
+  "street_ew": {
+    "blender": [
+      0.5,
+      -19.5,
+      -24.0
+    ],
+    "normal_blender": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "template": [
+      72.5,
+      48.0,
+      91.5
+    ],
+    "normal_template": [
+      0.0,
+      1.0,
+      -0.0
+    ],
+    "doc": "E-W road in front of A's lobby (lobby door at y -13, x -3..3)."
+  },
+  "parking_center": {
+    "blender": [
+      11.5,
+      -35.0,
+      -24.0
+    ],
+    "normal_blender": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "template": [
+      83.5,
+      48.0,
+      107.0
+    ],
+    "normal_template": [
+      0.0,
+      1.0,
+      -0.0
+    ],
+    "doc": "Middle of the parking lot's northern aisle (clear of cars, 6 wide)."
+  },
+  "plaza_center": {
+    "blender": [
+      -36.5,
+      -36.5,
+      -24.0
+    ],
+    "normal_blender": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "template": [
+      35.5,
+      48.0,
+      108.5
+    ],
+    "normal_template": [
+      0.0,
+      1.0,
+      -0.0
+    ],
+    "doc": "Centre of the pink plaza (open, planters 6 blocks off)."
+  },
+  "tunnel_center": {
+    "blender": [
+      2.0,
+      -2.5,
+      -36.0
+    ],
+    "normal_blender": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "template": [
+      74.0,
+      36.0,
+      74.5
+    ],
+    "normal_template": [
+      0.0,
+      1.0,
+      -0.0
+    ],
+    "doc": "Southern track bed of the subway under A, between two pillars."
+  },
+  "tunnel_platform": {
+    "blender": [
+      -19.5,
+      -7.0,
+      -35.0
+    ],
+    "normal_blender": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "template": [
+      52.5,
+      37.0,
+      79.0
+    ],
+    "normal_template": [
+      0.0,
+      1.0,
+      -0.0
+    ],
+    "doc": "Middle of the subway platform (edge at y -5)."
+  },
+  "train_nose": {
+    "blender": [
+      51.0,
+      3.5,
+      -33.5
+    ],
+    "normal_blender": [
+      1.0,
+      0.0,
+      0.0
+    ],
+    "template": [
+      123.0,
+      38.5,
+      68.5
+    ],
+    "normal_template": [
+      1.0,
+      0.0,
+      -0.0
+    ],
+    "doc": "East end of the train on the northern track (cars span x 8..50)."
+  },
+  "sky_zenith": {
+    "blender": [
+      0.0,
+      0.0,
+      70.5
+    ],
+    "normal_blender": [
+      0.0,
+      0.0,
+      -1.0
+    ],
+    "template": [
+      72.0,
+      142.5,
+      72.0
+    ],
+    "normal_template": [
+      0.0,
+      -1.0,
+      -0.0
+    ],
+    "doc": "Inside of the shell straight above the origin."
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "frames": [
+    0,
+    489
+  ],
+  "fps": 30,
+  "vix": "out/vix/ult_sendai.json",
+  "vix_cameras": 24,
+  "vix_warnings": [],
+  "events": "out/events/ult_sendai.json",
+  "event_count": 120,
+  "paths": [
+    "out/paths/yuta.json",
+    "out/paths/ishigori.json"
+  ],
+  "anim": {
+    "yuta": {
+      "mode": "baked",
+      "frames": 490,
+      "tracks": 20,
+      "keys": 9800,
+      "drift": 0.0,
+      "path": "out/anim/yuta.json"
+    },
+    "ishigori": {
+      "mode": "baked",
+      "frames": 490,
+      "tracks": 20,
+      "keys": 9800,
+      "drift": 0.0,
+      "path": "out/anim/ishigori.json"
+    }
+  },
+  "anim_rootmotion": {
+    "yuta": {
+      "mode": "baked",
+      "frames": 490,
+      "tracks": 20,
+      "keys": 9800,
+      "drift": 0.0,
+      "path": "out/anim_rootmotion/yuta.json"
+    },
+    "ishigori": {
+      "mode": "baked",
+      "frames": 490,
+      "tracks": 20,
+      "keys": 9800,
+      "drift": 0.0,
+      "path": "out/anim_rootmotion/ishigori.json"
+    }
+  }
+}
