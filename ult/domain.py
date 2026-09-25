@@ -8,7 +8,7 @@ Every box here is an inclusive block range (x0, y0, z0, x1, y1, z1), the convent
 Grid.box. Heights the choreography is staged against (a floor of blocks at z is walked
 at z + 1):
 
-    z = -25   ground surface layer (asphalt, sidewalk, grass); streets are walked at -24
+    z = -25   ground surface layer (asphalt, sidewalk, paving, grass); walked at -24
     z =  -1   turf roof of A; walked at 0, the origin
     z =  12   roof of the glass office C; walked at 13, behind a two-high glass parapet
     z =  -5   the dark office floor inside C; walked at -4
@@ -28,6 +28,7 @@ so one key is one block state and one Blender material.
 from __future__ import annotations
 
 import math
+import zlib
 
 import numpy as np
 
@@ -57,7 +58,6 @@ _BLOCKS = [
     ("gray_concrete", "gray_concrete", (54, 57, 61)),
     ("black_concrete", "black_concrete", (8, 10, 15)),
     ("red_concrete", "red_concrete", (142, 32, 32)),
-    ("orange_concrete", "orange_concrete", (224, 97, 0)),
     ("yellow_concrete", "yellow_concrete", (240, 175, 21)),
     ("lime_concrete", "lime_concrete", (94, 168, 24)),
     ("green_concrete", "green_concrete", (73, 91, 36)),
@@ -90,12 +90,12 @@ _BLOCKS = [
     ("lapis_block", "lapis_block", (31, 67, 140)),
     # see-through
     ("glass", "glass", (175, 213, 219), "glass"),
-    ("white_stained_glass", "white_stained_glass", (240, 240, 240), "glass"),
     ("light_blue_stained_glass", "light_blue_stained_glass", (102, 153, 216), "glass"),
     ("blue_stained_glass", "blue_stained_glass", (51, 76, 178), "glass"),
     ("light_gray_stained_glass", "light_gray_stained_glass", (153, 153, 153), "glass"),
     ("gray_stained_glass", "gray_stained_glass", (76, 76, 76), "glass"),
     ("black_stained_glass", "black_stained_glass", (25, 25, 25), "glass"),
+    # rails lie flat: "glass" so they hide nothing below (env.SHAPES flattens the mesh)
     ("rail_ew", "rail", (125, 111, 88), "glass", {"shape": "east_west"}),
     # the invisible light block: exported, never meshed
     ("light", "light", (255, 250, 200), "light", {"level": "15"}),
@@ -133,6 +133,7 @@ def palette() -> voxel.Palette:
 ASPHALT = "gray_concrete"
 PAINT = "white_concrete"
 SIDEWALK = "smooth_stone"
+PAVING = "polished_andesite"
 GRASS = "grass_block"
 TURF = "lime_concrete"
 AIR = voxel.AIR
@@ -163,14 +164,16 @@ TRAIN = ((8, 20), (22, 35), (37, 50))                 # x ranges of the three ca
 
 
 class Anchor(tuple):
-    """A world point (x, y, z) that also carries a unit `normal` (or None) and `doc`.
-
-    It is a plain 3-tuple to anything that takes a point: Vector(anchor), x, y, z = a.
+    """A world point (x, y, z) with the unit `normal` of the surface it lies on, an
+    optional horizontal `facing` (what the point looks at, or which way an edge runs)
+    and a `doc` line. It is a plain 3-tuple to anything that takes a point:
+    Vector(anchor), x, y, z = anchor.
     """
 
-    def __new__(cls, pos, normal=None, doc=""):
+    def __new__(cls, pos, normal=(0, 0, 1), doc="", facing=None):
         self = super().__new__(cls, tuple(float(v) for v in pos))
-        self.normal = None if normal is None else tuple(float(v) for v in normal)
+        self.normal = tuple(float(v) for v in normal)
+        self.facing = None if facing is None else tuple(float(v) for v in facing)
         self.doc = doc
         return self
 
@@ -179,47 +182,55 @@ class Anchor(tuple):
         return tuple(self)
 
 
+UP = (0, 0, 1)
 SETS = {
-    "turf_center": Anchor((0, 0, 0), (0, 0, 1),
-        "Caster's start on A's turf roof, the world origin, on the court's halfway line."),
-    "turf_shed_front": Anchor((-3.0, 7.0, 0), (0, -1, 0),
-        "Turf roof right in front of the red shed's south face (door at x -7..-6)."),
+    "turf_center": Anchor((0, 0, 0), UP,
+        "Caster's start on A's turf roof, the world origin: between the court's halfway "
+        "line (north) and the start mark (south).", facing=(0, 1, 0)),
+    "turf_shed_front": Anchor((-3.0, 7.0, 0), UP,
+        "Turf roof right in front of the red shed's south face (door at x -7..-6).",
+        facing=(0, 1, 0)),
     "turf_south_edge": Anchor((0.0, -12.0, 0), (0, 1, 0),
-        "Turf roof at the inner face of the south parapet, under the fence."),
+        "Foot of the south parapet's inner face, under the fence; the street is below.",
+        facing=(0, -1, 0)),
     "turf_east_edge": Anchor((11.0, 0.0, 0), (-1, 0, 0),
-        "Turf roof at the inner face of the east parapet, under the fence."),
+        "Foot of the east parapet's inner face, under the fence; C is across the gap.",
+        facing=(1, 0, 0)),
     "pink_wall": Anchor((-29.0, 0.0, -7.5), (1, 0, 0),
         "B's east face at mid height, between two balcony slabs; normal points east."),
-    "pink_roof": Anchor((-39.5, 0.5, 9.0), (0, 0, 1),
+    "pink_roof": Anchor((-39.5, 0.5, 9.0), UP,
         "Centre of B's roof walking surface."),
-    "glass_roof": Anchor((24.5, -2.5, 13.0), (0, 0, 1),
+    "glass_roof": Anchor((24.5, -2.5, 13.0), UP,
         "Centre of C's roof walking surface."),
-    "glass_roof_edge": Anchor((15.5, -2.5, 13.0), (-1, 0, 0),
-        "C's roof along its west glass parapet (runs y -11..5); normal points out, west."),
-    "office_floor": Anchor((24.5, -2.5, -4.0), (0, 0, 1),
+    "glass_roof_edge": Anchor((15.5, -2.5, 13.0), UP,
+        "C's roof along its west glass parapet (x 14, 2 high); the run goes y -11..5.",
+        facing=(0, 1, 0)),
+    "office_floor": Anchor((24.5, -2.5, -4.0), UP,
         "Centre of the dark office floor inside C (open 9 x 7 blocks, ceiling at -1)."),
-    "atrium_floor": Anchor((24.5, 18.5, STREET), (0, 0, 1),
+    "atrium_floor": Anchor((24.5, 18.5, STREET), UP,
         "Centre of D's white floor, under the red-beamed glass roof at z -6."),
-    "orange_balcony": Anchor((-41.5, 15.5, -9.0), (0, -1, 0),
-        "On a south balcony of E (slab z -10), behind its white rail."),
+    "orange_balcony": Anchor((-41.5, 15.5, -9.0), UP,
+        "On a south balcony of E (slab z -10), behind its white rail.", facing=(0, -1, 0)),
     "slope_roof": Anchor((-0.5, 29.5, -5.0), (0, -0.4, 0.92),
-        "Middle of G's stepped blue roof; normal is the mean slope."),
-    "dome_top": Anchor((30.5, 44.5, -2.0), (0, 0, 1),
+        "Middle of G's stepped blue roof; normal is the mean slope.", facing=(0, 1, 0)),
+    "dome_top": Anchor((30.5, 44.5, -2.0), UP,
         "Top of F's dome."),
-    "dome_podium": Anchor((30.5, 31.8, -13.0), (0, -1, 0),
-        "F's podium rim, south side, at the foot of the dome."),
-    "street_crossing": Anchor((-19.5, -19.5, STREET), (0, 0, 1),
+    "dome_podium": Anchor((30.5, 31.8, -13.0), UP,
+        "F's podium rim, south side, at the foot of the dome.", facing=(0, 1, 0)),
+    "street_crossing": Anchor((-19.5, -19.5, STREET), UP,
         "Centre of the junction of the two roads."),
-    "street_ew": Anchor((0.5, -19.5, STREET), (0, 0, 1),
-        "E-W road in front of A's lobby (lobby door at y -13, x -3..3)."),
-    "parking_center": Anchor((11.5, -35.0, STREET), (0, 0, 1),
-        "Middle of the parking lot's northern aisle (clear of cars, 6 wide)."),
-    "plaza_center": Anchor((-36.5, -36.5, STREET), (0, 0, 1),
+    "street_ew": Anchor((0.5, -19.5, STREET), UP,
+        "E-W road in front of A's lobby (lobby door at y -13, x -3..3).", facing=(0, 1, 0)),
+    "parking_center": Anchor((11.5, -35.0, STREET), UP,
+        "Middle of the parking lot's northern aisle (clear of cars, 6 wide).",
+        facing=(1, 0, 0)),
+    "plaza_center": Anchor((-36.5, -36.5, STREET), UP,
         "Centre of the pink plaza (open, planters 6 blocks off)."),
-    "tunnel_center": Anchor((2.0, -2.5, -36.0), (0, 0, 1),
-        "Southern track bed of the subway under A, between two pillars."),
-    "tunnel_platform": Anchor((-19.5, -7.0, -35.0), (0, 0, 1),
-        "Middle of the subway platform (edge at y -5)."),
+    "tunnel_center": Anchor((2.0, -1.5, -36.0), UP,
+        "Southern track bed of the subway under A, between the rail (y -3) and the "
+        "pillars (y 0).", facing=(1, 0, 0)),
+    "tunnel_platform": Anchor((-19.5, -7.0, -35.0), UP,
+        "Middle of the subway platform (edge at y -5).", facing=(0, 1, 0)),
     "train_nose": Anchor((51.0, 3.5, -33.5), (1, 0, 0),
         "East end of the train on the northern track (cars span x 8..50)."),
     "sky_zenith": Anchor((0, 0, R_IN), (0, 0, -1),
@@ -260,6 +271,18 @@ def _dist(grid):
     return np.sqrt((X + 0.5) ** 2 + (Y + 0.5) ** 2 + (Z + 0.5) ** 2, dtype=np.float32)
 
 
+def _smooth_noise(rng, sx, sy, cell):
+    """Value noise in [0, 1) over an sx x sy plan: a random lattice every `cell` blocks,
+    bilinearly interpolated."""
+    c = rng.random((sx // cell + 2, sy // cell + 2))
+    u, v = np.arange(sx) / cell, np.arange(sy) / cell
+    i, j = u.astype(int), v.astype(int)
+    fu, fv = (u - i)[:, None], (v - j)[None, :]
+    near = c[i][:, j] * (1 - fv) + c[i][:, j + 1] * fv
+    far = c[i + 1][:, j] * (1 - fv) + c[i + 1][:, j + 1] * fv
+    return near * (1 - fu) + far * fu
+
+
 def _hash(X, Y, Z):
     """Deterministic per-cell noise in [0, 1)."""
     h = (X * 73856093) ^ (Y * 19349663) ^ (Z * 83492791)
@@ -278,7 +301,6 @@ def build_grid() -> voxel.Grid:
 class _Builder:
     def __init__(self):
         self.g = voxel.Grid(LO, HI, palette())
-        self.rng = np.random.default_rng(SEED)
         self.X, self.Y, self.Z = self.g.coords()
         self.d = _dist(self.g)
         # plan view of what the city ring must keep off; box interiors kept free of lights
@@ -287,6 +309,11 @@ class _Builder:
 
     def id(self, key):
         return self.g.pal[key]
+
+    @staticmethod
+    def rng(tag):
+        """A random stream per feature, so editing one does not reshuffle the others."""
+        return np.random.default_rng([SEED, zlib.crc32(tag.encode())])
 
     def build(self):
         self.ground()
@@ -350,17 +377,22 @@ class _Builder:
         """Hollow walls of BOXES[name] from the street up to z = top, plan reserved."""
         x0, y0, z0, x1, y1, _ = BOXES[name]
         self.g.shell(x0, y0, z0, x1, y1, top, block, floor=False, roof=False)
-        self.take(x0, y0, x1, y1, margin=3)
+        self.take(x0, y0, x1, y1, margin=2)
         self.interiors.append((x0, y0, z0, x1, y1, top))
         self.paint(x0 - 2, y0 - 2, x1 + 2, y1 + 2, SIDEWALK)
 
     # -------------------------------------------------------------- ground and streets
 
     def ground(self):
-        g, Z, d = self.g, self.Z, self.d
-        inside = d < R_IN
-        g.a[inside & (Z < GROUND)] = self.id("stone")
-        g.a[inside & (Z == GROUND)] = self.id(GRASS)
+        """Stone below; the surface is paving with patches of grass. Streets, lots and
+        building plots paint over it."""
+        g, iz = self.g, GROUND - self.g.lo[2]
+        inside = self.d < R_IN
+        g.a[inside & (self.Z < GROUND)] = self.id("stone")
+        noise = _smooth_noise(self.rng("ground"), *g.a.shape[:2], cell=12)
+        surface = np.where(noise < 0.4, self.id(GRASS), self.id(PAVING))
+        top = inside[:, :, iz]
+        g.a[:, :, iz][top] = surface[top]
 
     def streets(self):
         g = self.g
@@ -385,7 +417,7 @@ class _Builder:
             self.paint(s, -28, s, -26, PAINT)
 
     def parking(self):
-        g, rng = self.g, self.rng
+        g, rng = self.g, self.rng("parking")
         x0, y0, _, x1, y1, _ = BOXES["parking"]
         self.paint(x0, y0, x1, y1, ASPHALT)
         self.take(x0, y0, x1, y1, margin=2)
@@ -517,7 +549,8 @@ class _Builder:
         self.building("turf", "smooth_sandstone", z1)
         for z in range(-21, -1, 3):
             g.box(x0 + 1, y0 + 1, z, x1 - 1, y1 - 1, z, "light_gray_concrete")
-        glass, frame, plinth = self.id("blue_stained_glass"), self.id("smooth_quartz"), self.id("terracotta")
+        glass, frame = self.id("blue_stained_glass"), self.id("smooth_quartz")
+        plinth = self.id("terracotta")
 
         def rule(U, Z, edge, face):
             win = ((Z + 24) % 3 == 1) & ~edge & (Z < z1)
@@ -603,7 +636,7 @@ class _Builder:
         g.box(22, y0 + 1, f, 22, y0 + 3, f + 2, "white_concrete")
         g.box(27, y0 + 1, f, 27, y0 + 3, f + 2, "white_concrete")
         g.box(23, y0 + 3, f, 26, y0 + 3, f + 2, "light_gray_stained_glass")
-        g.box(23, y0 + 3, f, 23, y0 + 3, f + 1, "white_concrete")
+        g.box(24, y0 + 3, f, 25, y0 + 3, f + 1, AIR)                 # meeting room door
         for x, y in ((18, -3), (31, -3), (24, 3)):
             g.set(x, y, f + 2, "light_dim")
 
@@ -686,20 +719,23 @@ class _Builder:
         dz = Z + 0.5 - cz
         d = np.sqrt(rp ** 2 + dz ** 2)
         shell = (d <= DOME_R) & (d > DOME_R - 1.2) & (dz > 0)
-        # triangle lattice: rings of latitude plus two families of diagonals
-        az = np.arctan2(Y + 0.5 - cy, X + 0.5 - cx) / (2 * np.pi) * 20
-        el = np.arcsin(np.clip(dz / np.maximum(d, 1e-6), 0, 1)) / (np.pi / 2) * 5
-        near = lambda v, w: np.abs(v - np.round(v)) < w
-        lines = near(el, 0.1) | ((near(az + el / 2, 0.09) | near(az - el / 2, 0.09)) & (el < 4.2))
+        # geodesic look: a triangle lattice in plan (three families of lines at 120
+        # degrees, 5.2 apart) dropped vertically onto the dome, plus two rings of latitude
+        px, py = X + 0.5 - cx, Y + 0.5 - cy
+        lines = np.zeros(shell.shape, dtype=bool)
+        for ang in (90, 210, 330):
+            u = (px * math.cos(math.radians(ang)) + py * math.sin(math.radians(ang))) / 5.2
+            lines |= np.abs(u - np.round(u)) * 5.2 < 0.5
+        lines |= np.isin(Z, (int(cz) + 3, int(cz) + 7))
         a[shell] = self.id("white_concrete")
-        a[shell & lines & (el > 0.3)] = self.id("light_gray_concrete")
+        a[shell & lines] = self.id("light_gray_concrete")
         self.paint(x0, y0, x1, y1, SIDEWALK)
 
     # -------------------------------------------------------------- background
 
     def city_ring(self):
-        """Hollow boxes of varied height between radius ~56 and the shell."""
-        g, rng = self.g, self.rng
+        """Background blocks: a ring of towers (8..40 high) between radius ~52 and the
+        shell, then low-rise infill (4..14 high) in the plots still free further in."""
         schemes = [("light_gray_concrete", "gray_concrete"),
                    ("white_terracotta", "light_gray_terracotta"),
                    ("light_blue_terracotta", "blue_terracotta"),
@@ -710,20 +746,28 @@ class _Builder:
                    ("light_gray_terracotta", "gray_terracotta"),
                    ("blue_terracotta", "gray_concrete"),
                    ("purple_terracotta", "gray_terracotta")]
-        for _ in range(900):
+        rng = self.rng("city")
+        self._scatter(rng, schemes, 4000, radius=(52, 64), size=(5, 14), height=(8, 40), far=67.0)
+        self._scatter(rng, schemes, 4000, radius=(24, 62), size=(5, 11), height=(4, 14), far=65.5)
+
+    def _scatter(self, rng, schemes, tries, radius, size, height, far):
+        g = self.g
+        for _ in range(tries):
             ang = rng.uniform(0, 2 * math.pi)
-            rad = rng.uniform(55, 63)
-            w, l = (int(v) for v in rng.integers(5, 13, size=2))
+            rad = rng.uniform(*radius)
+            w, l = (int(v) for v in rng.integers(size[0], size[1] + 1, size=2))
             x0 = int(round(rad * math.cos(ang) - w / 2))
             y0 = int(round(rad * math.sin(ang) - l / 2))
             x1, y1 = x0 + w - 1, y0 + l - 1
-            corners = [math.hypot(x, y) for x in (x0, x1 + 1) for y in (y0, y1 + 1)]
-            if max(corners) > 65.5 or min(corners) < 50:
+            r_max = max(math.hypot(x, y) for x in (x0, x1 + 1) for y in (y0, y1 + 1))
+            if r_max > far:
                 continue
             if self.taken[g._sl(x0 - 1, y0 - 1, 0, x1 + 1, y1 + 1, 0)[:2]].any():
                 continue
-            ztop = int(math.floor(math.sqrt(R_IN ** 2 - max(corners) ** 2))) - 2
-            top = min(STREET + int(rng.integers(8, 41)) - 1, ztop)
+            ztop = int(math.floor(math.sqrt(R_IN ** 2 - r_max ** 2))) - 2   # roof inside
+            top = min(STREET + int(rng.integers(height[0], height[1] + 1)) - 1, ztop)
+            if top < STREET + height[0] - 1:
+                continue
             wall, win = schemes[rng.integers(len(schemes))]
             g.shell(x0, y0, STREET, x1, y1, top, wall, floor=False)
             win_id = self.id(win)

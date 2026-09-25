@@ -29,6 +29,11 @@ def template_point(grid, p):
     return [p[0] - lo[0], p[2] - lo[2], sy - (p[1] - lo[1])]
 
 
+def template_dir(v):
+    """A Blender direction in template axes (x east, y up, z south); None stays None."""
+    return v and [v[0], v[2], 0.0 - v[1]]
+
+
 def main():
     t0 = time.time()
     grid = domain.build_grid()
@@ -39,12 +44,13 @@ def main():
 
     sets = {}
     for name, a in domain.SETS.items():
-        n = a.normal
         sets[name] = {
             "blender": list(a),
-            "normal_blender": n and list(n),
+            "normal_blender": list(a.normal),
+            "facing_blender": a.facing and list(a.facing),
             "template": template_point(grid, a),
-            "normal_template": n and [n[0], n[2], 0.0 - n[1]],
+            "normal_template": template_dir(a.normal),
+            "facing_template": template_dir(a.facing),
             "doc": a.doc,
         }
     with open(paths.out("domain", "domain_sets.json"), "w") as fh:

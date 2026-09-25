@@ -14,7 +14,9 @@ than a full block (rails lie flat).
 Objects: one per zone of ult.domain.zone_map, named <collection>_<zone>: _shell (the sky,
 inward sides only), _ground, _city (the background ring, trees, street furniture),
 _tunnel, and one per named building (_turf, _pink, _glass, _atrium, _orange, _slope,
-_dome, _parking). The shell object casts no shadow, so the sun reaches inside.
+_dome, _parking). The shell object casts no shadow, so the sun reaches inside. Also in
+the collection: the sun, a point light at each lamp block, and a child collection
+<collection>_sets with an arrows empty per ult.domain.SETS anchor (Z = surface normal).
 
 Materials: one per palette entry, "blk.<key>": the display colour, slightly rough, with a
 faint per-block tint (face attribute "blk") and darkened block edges (from the UVs) so
@@ -33,7 +35,7 @@ import math
 
 import bpy
 import numpy as np
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 from ult import domain
 
@@ -294,13 +296,15 @@ def sky_material(name="Domain_sky"):
 # ------------------------------------------------------------------------ scene
 
 
-def build_environment(grid, collection_name="Domain", zones=None, look=True, lamps=True):
+def build_environment(grid, collection_name="Domain", zones=None, look=True, lamps=True,
+                      anchors=True):
     """Mesh `grid` into collection `collection_name` and light it for dusk.
 
     zones: (names, uint8 array like grid.a) as from ult.domain.zone_map (the default).
     Rebuilding into an existing collection replaces its objects. look=False leaves the
     scene's world, colour management and engine settings alone; lamps=False skips the
-    point lights next to lamp blocks (the subway's ceiling lamps).
+    point lights next to lamp blocks (the subway's ceiling lamps); anchors=False skips
+    the empties marking ult.domain.SETS.
     """
     scene = bpy.context.scene
     coll = bpy.data.collections.get(collection_name)
@@ -308,7 +312,7 @@ def build_environment(grid, collection_name="Domain", zones=None, look=True, lam
         coll = bpy.data.collections.new(collection_name)
     if coll.name not in scene.collection.children:
         scene.collection.children.link(coll)
-    for obj in list(coll.objects):
+    for obj in list(coll.all_objects):
         data = obj.data
         bpy.data.objects.remove(obj)
         if data is not None and data.users == 0:
@@ -352,6 +356,8 @@ def build_environment(grid, collection_name="Domain", zones=None, look=True, lam
     add_sun(coll, f"{collection_name}_sun")
     if lamps:
         add_lamp_lights(grid, coll, f"{collection_name}_lamp")
+    if anchors:
+        add_anchor_empties(coll, f"{collection_name}_sets")
     if look:
         setup_world(scene)
         setup_look(scene)
@@ -394,6 +400,32 @@ def add_lamp_lights(grid, coll, name="Domain_lamp"):
                 objs.append(obj)
                 break
     return objs
+
+
+def add_anchor_empties(parent, name="Domain_sets", sets=None):
+    """One arrows empty "set.<name>" per anchor, in a child collection: +Z along the
+    surface normal, +Y along `facing` when the anchor has one. They never render."""
+    coll = bpy.data.collections.get(name) or bpy.data.collections.new(name)
+    if coll.name not in parent.children:
+        parent.children.link(coll)
+    coll.hide_render = True
+    for key, a in (sets or domain.SETS).items():
+        z = Vector(a.normal).normalized()
+        hint = Vector(a.facing) if a.facing else Vector((0, 1, 0))
+        y = hint - z * hint.dot(z)
+        if y.length < 1e-6:
+            y = Vector((0, 1, 0)) - z * z.y
+            if y.length < 1e-6:
+                y = Vector((1, 0, 0))
+        y.normalize()
+        x = y.cross(z)
+        obj = bpy.data.objects.new(f"set.{key}", None)
+        obj.empty_display_type = "ARROWS"
+        obj.empty_display_size = 0.75
+        obj.matrix_world = Matrix.Translation(Vector(a)) @ Matrix((x, y, z)).transposed().to_4x4()
+        obj["doc"] = a.doc
+        coll.objects.link(obj)
+    return coll
 
 
 def setup_world(scene, name="Domain_dusk"):
