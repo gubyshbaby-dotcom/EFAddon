@@ -395,36 +395,38 @@ def bolt(name, start, end, f0, f1, color=CYAN, radius=0.03, amp=0.35, seed=0.0,
     mat, em, mix = emission_mat("MAT-" + name, color, strength, 1.0)
     me.materials.append(mat)
     mod = obj.modifiers.new("Bolt", "NODES")
-    ng = _bolt_group()
-    mod.node_group = ng
-    # the group has no material input; assign via the object's slot
-    ids = {n: _sock_id(ng, n) for n in ("Start", "End", "Amplitude", "Radius", "Seed", "Bow")}
-    mod[ids["Start"]] = tuple(start)
-    mod[ids["End"]] = tuple(end)
-    mod[ids["Amplitude"]] = amp
-    mod[ids["Radius"]] = radius
-    mod[ids["Seed"]] = float(seed)
-    mod[ids["Bow"]] = tuple(bow)
+    mod.node_group = _material_group(mat)
+    ids = {n: _sock_id(mod.node_group, n)
+           for n in ("Start", "End", "Amplitude", "Radius", "Seed", "Bow")}
+    for k, v in (("Start", start), ("End", end), ("Amplitude", amp), ("Radius", radius),
+                 ("Seed", seed), ("Bow", bow)):
+        _set_input(mod, ids[k], v)
     for f, vals in (keys or []):
         for k, v in vals.items():
-            mod[ids[k]] = tuple(v) if isinstance(v, (tuple, list, Vector)) else float(v)
+            _set_input(mod, ids[k], v)
             obj.keyframe_insert('modifiers["Bolt"]["%s"]' % ids[k], frame=f)
-    # geometry nodes output has no material: add one through Set Material in a wrapper
-    _material_on_nodes(obj, mat)
     visible(obj, f0, f1)
     event("lightning", f0, frames=f1 - f0 + 1, start=list(start), end=list(end),
           color=list(color))
     return obj
 
 
-def _material_on_nodes(obj, mat):
-    """Wrap the bolt group so its mesh gets `mat` (per object)."""
-    mod = obj.modifiers["Bolt"]
-    inner = mod.node_group
+def _set_input(mod, ident, value):
+    """Write a modifier input in place. Assigning a Python tuple would replace the float
+    array Blender made for a vector socket with a double array, which geometry nodes then
+    reads as garbage."""
+    if isinstance(value, (tuple, list, Vector)):
+        mod[ident][:] = [float(v) for v in value]
+    else:
+        mod[ident] = float(value)
+
+
+def _material_group(mat):
+    """The bolt group with a Set Material on its output, one per material."""
     key = "ULT-Bolt-" + mat.name
     ng = bpy.data.node_groups.get(key)
     if ng is None:
-        ng = inner.copy()
+        ng = _bolt_group().copy()
         ng.name = key
         out = next(n for n in ng.nodes if n.bl_idname == "NodeGroupOutput")
         link = next(l for l in ng.links if l.to_node == out)
@@ -434,10 +436,7 @@ def _material_on_nodes(obj, mat):
         sm.inputs["Material"].default_value = mat
         ng.links.new(src, sm.inputs["Geometry"])
         ng.links.new(sm.outputs["Geometry"], out.inputs["Geometry"])
-    vals = {k: mod[k] for k in mod.keys() if k.startswith("Socket")}
-    mod.node_group = ng
-    for k, v in vals.items():
-        mod[k] = v
+    return ng
 
 
 # ------------------------------------------------------------------ beams, rings

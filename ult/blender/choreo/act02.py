@@ -134,9 +134,9 @@ def s016(Y, I):
     Y.place(372, IMPACT + Vector((-0.35, 0.0, 0.0)), -90.0, ease="out")
     Y.place(385, IMPACT + Vector((-0.4, 0.0, -0.15)), -90.0, ease="io")
     c = cam("S016", lens=24)
-    c.key(366, eye=fixed((-19.0, -13.5, -22.6)), target=fixed(IMPACT + Vector((0.5, 0.0, -1.5))),
+    c.key(366, eye=fixed((-24.5, -14.5, -8.5)), target=fixed(IMPACT + Vector((0.5, 0.0, -1.5))),
           roll=-9)
-    c.key(385, eye=fixed((-19.2, -13.3, -22.6)), target=fixed(IMPACT + Vector((0.6, 0.0, -1.0))),
+    c.key(385, eye=fixed((-24.6, -14.3, -8.5)), target=fixed(IMPACT + Vector((0.6, 0.0, -1.0))),
           roll=-9, ease="lin")
     fx.impact(370, IMPACT, strength=1.5, cam=c, hitstop=2)
     fx.dust("S016-dust", IMPACT + Vector((0.4, 0.0, 0.2)), 370, count=20, spread=5.0,
@@ -204,8 +204,8 @@ def s019(Y, I):
     Y.key(435, ease="out3", head=(-12, 0, 58), chest=(4, 0, 18))
     c = cam("S019", lens=40)
     head = follow(Y, "head", frame=426)
-    c.key(426, eye=lambda f: head(f) + Vector((0.35, -1.5, 0.05)), target=lambda f: head(f) + Vector((0.0, 0.8, 0.1)))
-    c.key(437, eye=lambda f: head(f) + Vector((0.3, -1.25, 0.05)), target=lambda f: head(f) + Vector((0.1, 0.8, 0.1)),
+    c.key(426, eye=lambda f: head(f) + Vector((0.5, -2.3, 0.2)), target=lambda f: head(f) + Vector((0.0, 0.8, -0.2)))
+    c.key(437, eye=lambda f: head(f) + Vector((0.45, -2.0, 0.2)), target=lambda f: head(f) + Vector((0.1, 0.8, -0.2)),
           ease="lin")
 
 
