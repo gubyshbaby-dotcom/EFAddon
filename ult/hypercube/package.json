@@ -1,0 +1,7 @@
+{
+  "name": "ult-hypercube",
+  "private": true,
+  "type": "module",
+  "description": "Ultimate «Гиперкуб»: choreography, camera, VFX and audio rendered on Minecraft player models (three.js), frame-exact",
+  "dependencies": { "three": "0.170.0" }
+}
