@@ -8,13 +8,13 @@ import { K, bake, appendPose } from './kit.js';
 
 // the user is baked after the victim, so the victim looks at fixed points along the user's path
 const USER_HEAD = [0.05, 1.42, -0.05];
-const USER_DASH = [0.30, 1.30, -3.05];
+const USER_DASH = [0.24, 1.55, -3.30];
 const CUBE = WORLD.cube;
 // footprints (the victim faces +Z: their left = +X)
 const G_L = [0.22, 0, -3.56], G_R = [-0.30, 0, -4.40];
 const HOP_L = [0.18, 0, -3.78];
 const LB_L = [0.60, 0, -4.20];                 // look-back: the left foot swung back-left
-const ST_R = [-0.14, 0, -4.06];                // stumble step when yanked
+const ST_R = [-0.22, 0, -4.24];                // stumble step when yanked round
 
 const keys = [
   // ---- guard: bladed left-forward stance, hands high, chin down; own breathing rhythm ----
@@ -43,22 +43,22 @@ const keys = [
   K(2.20, { torso: [-9, 38, 11], armL: [146, -10, 62], armR: [-18, 12, 52], head: [-10, 0, 4], shake: 0.8 }, 'sineOut'),
   // senses the dash (2.28): the head starts back toward the user — too late
   K(2.29, { look: [2.6, 1.6, -3.0], torso: [-8, 34, 10] }, 'sineIn'),
-  // ---- 2.35 GRAB by the collar: yanked forward and round, flails at the arm, stumbles a step ----
+  // ---- 2.35 GRAB by the collar: jerked round to face the user, grabs the wrist, leans away, stumbles a step ----
   K(2.35, { yaw: 214, footR: G_R, footL: LB_L, torso: [-6, 30, 8], look: [1.8, 1.5, -3.2], armL: [144, -8, 60], armR: [-14, 12, 54] },
     'sineIn'),
-  K(2.43, { torso: [24, 10, -4], head: [16, 0, -6], look: USER_DASH, armL: [100, 40, 32], armR: [110, 44, 24],
-    footR: [-0.20, 0.14, -4.20] }, 'quadOut', { armL: 'sineInOut', armR: 'sineInOut' }),
-  K(2.49, { yaw: 196, footR: ST_R, torso: [24, 4, -3] }, 'quadIn', { yaw: 'sineOut' }),
-  K(2.55, { torso: [20, 2, -2], head: [10, 0, -4], armL: [106, 36, 28], armR: [100, 42, 26], shake: 0.6 }, 'sineOut'),
-  K(2.583, { torso: [17, 2, -2], head: [6, 0, -2], armL: [112, 30, 40], armR: [104, 36, 38], lookW: 1, rot: [0, 0] }, 'linear'),
+  K(2.43, { torso: [-2, 12, -4], head: [-4, 0, -6], look: USER_DASH, armL: [116, 40, 22], armR: [122, 46, 18],
+    footR: [-0.26, 0.12, -4.30] }, 'quadOut', { armL: 'sineInOut', armR: 'sineInOut' }),
+  K(2.49, { yaw: 194, footR: ST_R, torso: [-6, 6, -5] }, 'quadIn', { yaw: 'sineOut' }),
+  K(2.555, { torso: [-9, 5, -6], head: [-6, 0, -4], armL: [120, 38, 22], armR: [126, 42, 18], shake: 0.8 }, 'sineOut'),
+  K(2.583, { torso: [-7, 4, -5], head: [-4, 0, -2], armL: [118, 34, 28], armR: [122, 38, 26], lookW: 1, rot: [0, 0], shake: 0.4 }, 'linear'),
   // ---- 2.60 KICK in the belly: folds over the sole (contact frame), held through the hit-stop ----
-  K(2.60, { yaw: 196, footR: ST_R, footL: LB_L, torso: [40, 0, 4], head: [36, 0, 6], armL: [96, 10, 74], armR: [100, 8, 70],
+  K(2.60, { yaw: 194, footR: ST_R, footL: LB_L, torso: [36, 0, 4], head: [38, 0, 6], armL: [92, 8, 76], armR: [96, 6, 72],
     lookW: 0, look: USER_DASH, shake: 0, rot: [0, 0] }, 'expoIn'),
-  K(2.65, { yaw: 196, footR: ST_R, footL: LB_L, torso: [40, 0, 4], head: [36, 0, 6], armL: [96, 10, 74], armR: [100, 8, 70],
+  K(2.65, { yaw: 194, footR: ST_R, footL: LB_L, torso: [36, 0, 4], head: [38, 0, 6], armL: [92, 8, 76], armR: [96, 6, 72],
     lookW: 0, look: USER_DASH, shake: 0, rot: [0, 0] }, 'linear'),
   // ---- knockback: the belly leads, head/arms/legs drag toward the user; rising toward the cube face ----
-  K(2.70, { legR: [44, 6, 14], legL: [30, -4, 12], torso: [46, 2, 6], head: [40, 0, 8], armL: [104, 8, 68], armR: [106, 6, 64],
-    at: [0.18, -4.40], y: 0.10, rot: [-6, 3] }, 'sineOut', { at: 'quadIn', y: 'sineInOut' }),
+  K(2.70, { legR: [44, 6, 14], legL: [30, -4, 12], torso: [44, 2, 6], head: [40, 0, 8], armL: [102, 8, 76], armR: [106, 6, 72],
+    at: [0.18, -4.52], y: 0.10, rot: [-6, 3] }, 'sineOut', { at: 'quadIn', y: 'sineInOut' }),
   K(2.80, { legR: [62, 8, 20], legL: [50, -6, 16], torso: [46, 4, 8], head: [24, 6, 10], armL: [120, 0, 70], armR: [118, 4, 66],
     at: [0.06, -5.55], y: 0.46, rot: [-18, 6] }, 'quadOut', { at: 'linear', y: 'sineOut' }),
   // the face swallows: drag, slowing, limbs reaching back out

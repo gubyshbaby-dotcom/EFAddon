@@ -349,9 +349,9 @@ function instPool(THREE, geom, mat, max, shadow) {
   return {
     mesh,
     reset() { n = 0; },
-    put(p, q, s, col) {
+    put(p, q, s, col, sy = 1) {
       if (n >= max || s <= 0.002) return;
-      Pv.copy(p); Sv.set(s, s, s); if (q) Q.copy(q); else Q.identity();
+      Pv.copy(p); Sv.set(s, s * sy, s); if (q) Q.copy(q); else Q.identity();
       M.compose(Pv, Q, Sv); mesh.setMatrixAt(n, M);
       Cc.setRGB(col[0], col[1], col[2]); mesh.setColorAt(n, Cc);
       n++;
@@ -810,7 +810,7 @@ export function create(ctx) {
         const u = tau / life, side = (R(sd, j, 2) - 0.5) * 2;
         Vel.set(Dv.x * back * (1.5 + R(sd, j, 3) * 2.5) - Dv.z * side * 1.2, 0.5 + R(sd, j, 4) * 1.4, Dv.z * back * (1.5 + R(sd, j, 3) * 2.5) + Dv.x * side * 1.2);
         drag(Pt, tmp.set(pp[0], 0.1, pp[2]), Vel, 4.5, 0.3, tau);
-        SM.put(Pt, null, (0.1 + R(sd, j, 5) * 0.1) * sm(u / 0.1) * (1 - sm((u - 0.3) / 0.7)), [0.86, 0.8, 0.7]);
+        SM.put(Pt, null, (0.08 + R(sd, j, 5) * 0.08) * sm(u / 0.1) * (1 - sm((u - 0.3) / 0.7)), [0.56, 0.47, 0.36], 0.7);
       }
       for (let j = 0; j < 10; j++) {
         Vel.set(Dv.x * back * (1 + R(sd, j, 6) * 2) + (R(sd, j, 7) - 0.5) * 2, 2 + R(sd, j, 8) * 2.5, Dv.z * back * (1 + R(sd, j, 6) * 2) + (R(sd, j, 9) - 0.5) * 2);
@@ -1175,7 +1175,7 @@ export function create(ctx) {
       const size = 0.08 + Math.pow(R(13, j), 2) * 0.22;
       const a = R(13, j, 1) * TAU, vy = 5 + R(13, j, 2) * 7.5;
       const tL = 2 * vy / 24;
-      const vh = Math.max(1 + R(13, j, 3) * 6.5, 2.1 / tL);
+      const vh = Math.min(Math.max(1 + R(13, j, 3) * 6.5, 2.1 / tL), 4.2 / tL);
       Vel.set(Math.cos(a) * vh, vy, Math.sin(a) * vh);
       tmp.set(C.x + Math.cos(a) * 0.4, 0.3, C.z + Math.sin(a) * 0.4);
       debrisBlock(j % 3 === 0 ? DK : BK, 13, j, tmp, Vel, size, tau, j % 3 === 0 ? [0.8, 0.8, 0.8] : [1, 1, 1]);
@@ -1189,14 +1189,15 @@ export function create(ctx) {
       spr(BN, Pt, 0.03 + R(14, j, 3) * 0.03, 2, j % 3 === 0 ? [0.28, 0.42, 0.14] : j % 3 === 1 ? [0.36, 0.25, 0.16] : [0.24, 0.17, 0.11], 1, 1);
     }
     // toon dust ring + low skirt + rising column
-    for (let j = 0; j < 58; j++) {
+    for (let j = 0; j < 54; j++) {
       const ring = j < 40, col = j >= 46;
+      if (ring && j % 4 === 3) continue;
       let life, size0, p;
       if (ring) {
         const a = j / 40 * TAU + R(15, j) * 0.15, v0 = 5 + R(15, j, 1) * 4, kd = 3.4 + R(15, j, 2) * 1.2;
         const rr = 0.9 + v0 * (1 - Math.exp(-kd * tau)) / kd;
         p = Pt.set(C.x + Math.cos(a) * rr, 0.12 + R(15, j, 3) * 0.25 + 0.45 * (1 - Math.exp(-1.2 * tau)) * R(15, j, 4), C.z + Math.sin(a) * rr);
-        life = 1.0 + R(15, j, 5) * 0.7; size0 = 0.24 + R(15, j, 6) * 0.26;
+        life = 0.75 + R(15, j, 5) * 0.5; size0 = 0.16 + R(15, j, 6) * 0.2;
       } else if (!col) {
         const a = (j - 40) / 6 * TAU + R(15, j) * 0.5, v0 = 10 + R(15, j, 1) * 3, kd = 6;
         const rr = 0.6 + v0 * (1 - Math.exp(-kd * tau)) / kd;
@@ -1205,12 +1206,12 @@ export function create(ctx) {
       } else {
         const a = R(15, j) * TAU, rr = 0.15 + R(15, j, 1) * 0.5, vy = 2.5 + R(15, j, 2) * 3;
         p = Pt.set(C.x + Math.cos(a) * rr + tau * 0.25, 0.3 + vy * (1 - Math.exp(-1.1 * tau)) / 1.1, C.z + Math.sin(a) * rr + tau * 0.08);
-        life = 1.8 + R(15, j, 5) * 0.8; size0 = 0.3 + R(15, j, 6) * 0.3;
+        life = 1.3 + R(15, j, 5) * 0.6; size0 = 0.18 + R(15, j, 6) * 0.2;
       }
       const u = tau / life; if (u > 1) continue;
-      const sc = size0 * sm(tau / (col ? 0.18 : 0.07)) * (1 + 0.7 * u) * (1 - sm((u - 0.5) / 0.5));
-      const shade = 0.88 + R(15, j, 7) * 0.12;
-      SM.put(p, null, sc, col ? [0.5 * shade, 0.45 * shade, 0.45 * shade] : [0.82 * shade, 0.74 * shade, 0.62 * shade]);
+      const sc = size0 * sm(tau / (col ? 0.18 : 0.07)) * (1 + 0.5 * u) * (1 - sm((u - 0.35) / 0.65));
+      const shade = 0.8 + R(15, j, 7) * 0.2;
+      SM.put(p, null, sc, col ? [0.3 * shade, 0.28 * shade, 0.29 * shade] : [0.52 * shade, 0.44 * shade, 0.34 * shade], col ? 1 : 0.62);
     }
     // smoke still curling out of the crater
     for (let j = 0; j < 9; j++) {
@@ -1218,7 +1219,7 @@ export function create(ctx) {
       if (st < 0.6) continue;
       const u = age / per, a = R(16, j, cyc) * TAU;
       Pt.set(C.x + Math.cos(a) * 0.4 + age * 0.35, 0.2 + age * 0.9, C.z + Math.sin(a) * 0.4 + age * 0.12);
-      SM.put(Pt, null, (0.15 + R(16, j, cyc, 2) * 0.15) * Math.sin(Math.PI * u) * (1 + u), [0.42, 0.4, 0.42]);
+      SM.put(Pt, null, (0.08 + R(16, j, cyc, 2) * 0.08) * Math.sin(Math.PI * u) * (1 + u), [0.34, 0.32, 0.33]);
     }
   }
   function landing(t, f) {
@@ -1239,12 +1240,12 @@ export function create(ctx) {
       groundQuad(Pt, (3.2 - rj) * (1 - Math.exp(-tt * 7)), 0, rj ? VIO : WHT, 1.6, (1 - u) ** 1.6, 0.2 * (1 - u) + 0.05, 1);
     }
     offerLight(Pt.set(C.x, 0.4, C.z), 12 * Math.exp(-tau * 8), VIO);
-    for (let j = 0; j < 24; j++) {
-      const a = j / 24 * TAU + R(17, j) * 0.2, v0 = 4 + R(17, j, 1) * 3, kd = 3.6;
-      const rr = 0.35 + v0 * (1 - Math.exp(-kd * tau)) / kd, life = 1.1 + R(17, j, 2) * 0.9, u = tau / life;
+    for (let j = 0; j < 16; j++) {
+      const a = j / 16 * TAU + R(17, j) * 0.3, v0 = 4 + R(17, j, 1) * 3, kd = 3.6;
+      const rr = 0.35 + v0 * (1 - Math.exp(-kd * tau)) / kd, life = 0.8 + R(17, j, 2) * 0.5, u = tau / life;
       if (u > 1) continue;
       Pt.set(C.x + Math.cos(a) * rr, 0.08 + R(17, j, 3) * 0.12 + 0.25 * (1 - Math.exp(-tau)) * R(17, j, 4), C.z + Math.sin(a) * rr);
-      SM.put(Pt, null, (0.14 + R(17, j, 5) * 0.14) * sm(tau / 0.06) * (1 + 0.6 * u) * (1 - sm((u - 0.45) / 0.55)), [0.82, 0.74, 0.62]);
+      SM.put(Pt, null, (0.08 + R(17, j, 5) * 0.09) * sm(tau / 0.06) * (1 + 0.5 * u) * (1 - sm((u - 0.35) / 0.65)), [0.52, 0.44, 0.34], 0.6);
     }
     for (let j = 0; j < 10; j++) {
       const size = 0.06 + R(18, j) * 0.08, a = R(18, j, 1) * TAU, vy = 3 + R(18, j, 2) * 3, vh = 1 + R(18, j, 3) * 2.2;

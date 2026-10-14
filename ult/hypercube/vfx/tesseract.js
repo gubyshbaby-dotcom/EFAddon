@@ -221,7 +221,7 @@ void main() {
   vec3 c = vCol * halo * 0.4 * (1.0 + pulse * 1.5 + wv) + mix(vCol, vec3(1.0, 0.96, 1.0), 0.7) * core * uCoreI * (1.0 + pulse * 0.6 + wv * 0.6);
   gl_FragColor = vec4(c * vI * vFade * clip * g, 1.0);
 }`;
-const _a = new THREE.Vector3(), _b = new THREE.Vector3();
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _yUp = new THREE.Vector3(0, 1, 0);
 const xyz = (p, i) => (Array.isArray(p) ? p[i] : i === 0 ? p.x : i === 1 ? p.y : p.z);
 export class Beams {
   /** o: {order, minPx, near, coreK, haloK, coreI, world: true if positions are world (for waves/clip)} */
@@ -966,16 +966,26 @@ export function create(ctx) {
         }
       }
     }
-    // throw trail (1.62 → 1.95)
+    // throw trail (1.62 → 1.95): hot core streak + two helix strands (cyan / magenta) twisting around the path
     if (t >= T_REL && t < T_UNF + 0.2) {
-      const n = 16;
+      const n = 22, dtk = 0.009, fadeAll = t > T_UNF ? Math.exp(-(t - T_UNF) * 14) : 1;
+      const side = new THREE.Vector3(), up = new THREE.Vector3(), dir = new THREE.Vector3();
       for (let k = 0; k < n; k++) {
-        const ta = t - k * 0.012, tb = t - (k + 1) * 0.012;
+        const ta = t - k * dtk, tb = t - (k + 1) * dtk;
         if (tb < T_REL || ta > T_UNF) continue;
         const pa = throwPos(Math.min(ta, T_UNF)), pb = throwPos(Math.max(tb, T_REL));
-        const fade = (1 - k / n) * (t > T_UNF ? Math.exp(-(t - T_UNF) * 14) : 1);
-        B.push(pa, pb, 0.035 * (1 - k / n) + 0.006, wColor(0.6 - k / n * 1.6), 2.2 * fade, wColor(0.6 - (k + 1) / n * 1.6), 2.2 * fade * 0.85);
+        const fk = 1 - k / n, fade = fk * fadeAll;
+        B.push(pa, pb, 0.012 + 0.03 * fk, wColor(0.9 - k / n * 1.9), 2.4 * fade, wColor(0.9 - (k + 1) / n * 1.9), 2.4 * fade * 0.9);
+        dir.subVectors(pa, pb).normalize(); side.crossVectors(dir, _yUp).normalize(); up.crossVectors(side, dir);
+        for (const [ph, col] of [[0, COL.cyan], [Math.PI, COL.magenta]]) {
+          const ra = 0.07 * (0.4 + 0.6 * (k / n)), rb = 0.07 * (0.4 + 0.6 * ((k + 1) / n));
+          const aa = ta * 55 + ph, ab = tb * 55 + ph;
+          const qa = pa.clone().addScaledVector(side, Math.cos(aa) * ra).addScaledVector(up, Math.sin(aa) * ra);
+          const qb = pb.clone().addScaledVector(side, Math.cos(ab) * rb).addScaledVector(up, Math.sin(ab) * rb);
+          B.push(qa, qb, 0.008 + 0.01 * fk, col, 2.0 * fade, col, 1.8 * fade);
+        }
       }
+      if (t < T_UNF) Sp.push(throwPos(t), 0.22, 2, [1, 0.85, 1], 1.4, t * 20);
       for (let i = 0; i < 40; i++) { // shed motes
         const ts = T_REL + (i / 40) * (T_UNF - T_REL), age = t - ts;
         if (age < 0 || age > 0.6) continue;
@@ -1148,9 +1158,9 @@ export function post(t, p, f) {
     // unfold burst
     if (t >= T_UNF) {
       const a = t - T_UNF;
-      p.radial = Math.max(p.radial, 0.55 * Math.exp(-a * 9));
-      p.chroma = Math.max(p.chroma, 0.35 * Math.exp(-a * 10));
-      p.flash = Math.max(p.flash, 0.22 * Math.exp(-a * 16));
+      p.radial = Math.max(p.radial, 0.2 * Math.exp(-a * 14));
+      p.chroma = Math.max(p.chroma, 0.3 * Math.exp(-a * 12));
+      p.flash = Math.max(p.flash, 0.12 * Math.exp(-a * 20));
       if (a < 0.3) p.radialCenter = sc;
     }
     if (t >= T_SHUT) {
