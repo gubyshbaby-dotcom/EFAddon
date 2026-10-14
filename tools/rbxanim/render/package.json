@@ -1,0 +1,9 @@
+{
+  "name": "rbxanim-render",
+  "private": true,
+  "type": "module",
+  "description": "Render Roblox R6 KeyframeSequences (converted to JSON by ../rbxm.py) on Minecraft player models",
+  "dependencies": {
+    "three": "0.170.0"
+  }
+}

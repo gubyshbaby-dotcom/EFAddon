@@ -1,0 +1,35 @@
+# user_id_prefix | victim_id_prefix | title   (ids are matched by prefix against the converted JSON names)
+DropkickUser__ | DropkickVictim__ | Dropkick
+Slap_Attacker__ | Slap_Victim__ | Slap
+AxeAttacker__ | AxeVictim__ | Axe
+baku_grab_spin__ | baku_grab_spin_victim__ | Bakugo grab spin
+bakugo_player_finisher__ | bakugo_victim_finisher__ | Bakugo finisher
+be_like_me_attacker__ | be_like_me_victim__ | Be like me
+Bounce_Grenade_Feint_Player_Finisher___ | Bounce_Grenade_Feint_Victim_Finisher___ | Bounce grenade feint finisher
+Bounce_Grenade_Player_Finisher__ | Bounce_Grenade_Victim_Finisher__ | Bounce grenade finisher
+Bounce_Grenade_Player_Finisher_Transition__ | Bounce_Grenade_Victim_Finisher_Transition__ | Bounce grenade transition
+Concussion_Strike_Aerial_Player_Grab__ | Concussion_Strike_Aerial_Victim_Grab__ | Concussion strike aerial grab
+Concussion_Strike_Grab_player__ | Concussion_Strike_Grab_Victim__ | Concussion strike grab
+Concussion_Strike_Grab_Player_Finisher__ | Concussion_Strike_Grab_Victim_Finisher__ | Concussion strike finisher
+Base_CS_Finsiher__ | Devil_CS_Finsiher_Victim__ | CS finisher (devil)
+Ember_Assault_Followup_player__ | Ember_Assault_Followup_victim__ | Ember assault follow-up
+Epicenter_2nd_Player__156kf__5666 | Epicenter_2nd_Victim__94kf__359c | Epicenter 2nd
+explosion_combo_player__ | explosion_combo_victim__ | Explosion combo
+FightingFury_User_V2__ | FightingFury_Victim_V2__ | Fighting fury
+hakari_plyr_TranslatedMovement__ | hakari_victim__ | Hakari
+NoEnemies_Attacker_Optimized__ | NoEnemies_Victim_Optimized__ | No enemies
+normal_ult__ | normal_victim__ | Normal ult
+pillar_finisher_play__188kf | pillar_victim__49kf | Pillar finisher
+recipro-followup__ | recipro-followup-victim__ | Recipro follow-up
+scatter_player__ | scatter_victim__ | Scatter
+starburst_ult_player__ | starburst_ult_victim__ | Starburst ult
+thanos_snap_player__ | thanos_snap_victim__ | Thanos snap
+Player__Homelander_Death_Emote___ | Victim__Homelander_Death_Emote___ | Homelander death emote
+player_finisher__ | VIctim_finsiher__ | Player finisher (25 s)
+thingamabob__ | victim_thing__ | Thingamabob
+yuta_dragging__ | yuta_dragging_victim__ | Yuta dragging
+attacker__ | Victim__400kf | Attacker / Victim
+player__48kf | victim__231kf | Player / victim
+ATrainExecuteUSER__ | ATrainExecuteREAL__ | A-Train execute
+Ricochet_Impact__ | RicochetImpactGrabV__ | Ricochet impact grab
+Ricochet_Impact_Followup__ | RicochetImpactEndV__ | Ricochet impact end
