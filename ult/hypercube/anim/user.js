@@ -8,7 +8,7 @@
 //   watches the cube swallow → 3.16 running step → 3.30 dives at the cube face
 // Inside (≥ 3.4): parked floating behind the victim (phase 1).
 import { INSIDE as I, WORLD } from '../timeline.js';
-import { K, bake, appendPose, pointAt } from './kit.js';
+import { K, bake, appendPose, pointAt } from './kit_prev.js';
 import VICTIM from './victim.js';
 
 const vHead = t => pointAt(VICTIM, 'head', [0, 4, 0], t);

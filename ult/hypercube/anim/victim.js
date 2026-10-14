@@ -4,7 +4,7 @@
 // HEAVY push kick in the belly (2.60, hit-stop 0.05): folds over the sole → flies into the cube face, swallowed, hidden.
 // Inside (≥ 3.4): parked floating at INSIDE (phase 1).
 import { INSIDE as I, WORLD } from '../timeline.js';
-import { K, bake, appendPose } from './kit.js';
+import { K, bake, appendPose } from './kit_prev.js';
 
 // the user is baked after the victim, so the victim looks at fixed points along the user's path
 const USER_HEAD = [0.05, 1.42, -0.05];

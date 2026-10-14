@@ -167,7 +167,7 @@ export function create(ctx) {
     _f.subVectors(_c, cam.position).normalize();                 // camera → subject
     _r.crossVectors(_f, _u).normalize();                          // camera right
     const hp = flashOf(t, 14);
-    const dark = smooth(T_RING, T_GAP, t) * (1 - smooth(T_MEGA, T_MEGA + 0.3, t));
+    const dark = smooth(T_RING, T_GAP, t) * (1 - smooth(8.7, 8.95, t));   // stays dark through B's shockwave
     const mega = t >= T_MEGA ? Math.exp(-Math.max(0, te - effTime(T_MEGA)) * 6) : 0;
     lights.sun.color.copy(KEYC);
     lights.sun.intensity = (1.7 + 0.5 * hp) * (1 - 0.45 * dark) + 3 * mega;
@@ -189,11 +189,11 @@ export function create(ctx) {
     const col = ramp(T_SLOW, T_HAM + 0.04, t), colE = col * col * col;
     const sw = swell(t);
     const focus = smooth(T_RING, T_GAP, t) * (1 - smooth(T_MEGA, T_MEGA + 0.25, t));
-    const megaKick = t >= T_MEGA ? Math.exp(-Math.max(0, te - effTime(T_MEGA)) * 10) : 0;
+    const megaKick = t >= T_MEGA ? Math.exp(-Math.max(0, te - effTime(T_MEGA)) * 16) : 0;
     const crack = Math.pow(ramp(T_CRACK, T_HAM, t), 0.8);
     const hits = lastHits(t, 2);
     const cen = I.clone().lerp(vch, 0.35 + 0.65 * colE);
-    const bright = (1 + 0.6 * Math.min(1.2, flashOf(t, 8)) + 0.8 * megaKick) * lerp(1, 0.45, dark) * (1 + 1.6 * (1 - entry)) * (1 + 0.9 * colE);
+    const bright = (1 + 0.6 * Math.min(1.2, flashOf(t, 8)) * (1 - 0.8 * dark) + 0.8 * megaKick) * lerp(1, 0.45, dark) * (1 + 1.6 * (1 - entry)) * (1 + 0.9 * colE);
     lat.forEach((T, k) => {
       const L = LAT[k];
       if (DBG.includes('nolat' + k)) { T.update({ s: 0 }); return; }
@@ -204,7 +204,7 @@ export function create(ctx) {
       const u = T.beams.u;
       u.uWaveC.value.copy(vch);
       u.uWave.value.set(0, 0, 0, 0);
-      const wa = h => Math.min(1.6, 2.2 * KIND_AMP[h.h.kind]) * Math.exp(-h.age * 1.2) * smooth(0, 0.04, h.age + 0.01);
+      const wa = h => Math.min(h.h.kind === 'mega' ? 0.7 : 1.6, 2.2 * KIND_AMP[h.h.kind]) * Math.exp(-h.age * 1.2) * smooth(0, 0.04, h.age + 0.01);
       if (hits[0]) u.uWave.value.x = 1 + hits[0].age * 22, u.uWave.value.y = wa(hits[0]);
       if (hits[1]) u.uWave.value.z = 1 + hits[1].age * 22, u.uWave.value.w = wa(hits[1]);
       u.uWaveW.value = 1.2 + k * 1.5;
@@ -279,7 +279,7 @@ export function post(t, p, f) {
   p.exposure *= 1 + 0.25 * e;
   // cracks → aberration ramps (plus a kick on every hit)
   const ck = smooth(T_CRACK, 8.0, t);
-  p.chroma = Math.max(p.chroma, ck * (0.18 + 0.22 * Math.min(1, flashOf(t, 12))));
+  p.chroma = Math.max(p.chroma, ck * (0.14 + 0.16 * Math.min(1, flashOf(t, 12))));
   // ring charge: darker, tighter
   const dk = smooth(T_RING, T_GAP, t) * (1 - smooth(T_MEGA, T_MEGA + 0.25, t));
   p.exposure *= 1 - 0.22 * dk;
