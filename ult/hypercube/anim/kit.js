@@ -20,7 +20,7 @@
 // moves '<limb>.pos' at key time t so the bone point lands exactly on the target (the limb thrusts out of its socket).
 import * as THREE from 'three';
 import { HITS } from '../timeline.js';
-import { sample, poseAt, makePlayer, applyPose, bonePoint, BONE_POINTS, PX } from '../rig.js';
+import { sample, ease, poseAt, makePlayer, applyPose, bonePoint, PX } from '../rig.js';
 
 export const FPS = 60;
 export const CATCH = 0.1;
@@ -112,6 +112,45 @@ export const pointAt = (def, part, local, t) => boneAt(def, [part, local], t);
 
 const evalPt = (v, t) => (typeof v === 'function' ? v(t) : v);
 
+// ---- rotation tracks: eased segments slerp (shortest path between two orientations); 'smooth' keys stay Catmull-Rom ----
+const flipOf = name => (name === 'torso' || name === 'head' ? [-1, 1, 1] : name.endsWith('L') ? [1, -1, -1] : [1, 1, 1]);
+function toQ(name, a) {
+  const f = flipOf(name);
+  return new THREE.Quaternion().setFromEuler(new THREE.Euler(f[0] * a[0] * D2R, f[1] * a[1] * D2R, f[2] * a[2] * D2R, 'ZYX'));
+}
+function fromQ(name, q, near) {
+  const e = new THREE.Euler().setFromQuaternion(q, 'ZYX'), f = flipOf(name);
+  const a = [f[0] * e.x * R2D, f[1] * e.y * R2D, f[2] * e.z * R2D];
+  return near ? a.map((v, i) => v + 360 * Math.round((near[i] - v) / 360)) : a;
+}
+function sampleRot(name, keys, t, near) {
+  const n = keys.length;
+  if (n === 1 || t <= keys[0][0]) return keys[0][1].slice();
+  if (t >= keys[n - 1][0]) return keys[n - 1][1].slice();
+  let i = 1;
+  while (i < n - 1 && keys[i][0] < t) i++;
+  const [t0, a] = keys[i - 1], [t1, b, e] = keys[i];
+  if (e === 'smooth' || e === 'step') return sample(keys, t);
+  const w = ease(e, t1 > t0 ? (t - t0) / (t1 - t0) : 1);
+  const ref = lerp(a, b, w);
+  if (w <= 0 || w >= 1) return ref;
+  return fromQ(name, toQ(name, a).slerp(toQ(name, b), w), near || ref);
+}
+
+/**
+ * Limb angles [pitch, yaw, roll] pointing limb `name` ('armR' 'armL' 'legR' 'legL') along d = [right, up, forward] in its
+ * parent frame (torso for arms, root for legSpace 'root' legs), twisted `twist` deg about its own axis (+90 = the inner
+ * face / palm up for an arm held forward). Minimal rotation from hanging, so no gimbal flips. Left limbs mirror.
+ */
+export function aim(name, d, twist = 0) {
+  const left = name.endsWith('L');
+  const v = new THREE.Vector3(left ? -d[0] : d[0], d[1], -d[2]).normalize();
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, -1, 0), v);
+  q.premultiply(new THREE.Quaternion().setFromAxisAngle(v, twist * D2R));
+  const e = new THREE.Euler().setFromQuaternion(q, 'ZYX');
+  return [e.x * R2D, e.y * R2D, e.z * R2D].map(x => +x.toFixed(2));
+}
+
 /**
  * Bake an actor. opts: { id, skin, slim, keys: [K...], from, to, hits: 'all' | [ids] (hit-stops that freeze it; default:
  * hits struck by this actor), reach: [...], cuts: [t...] (hard cuts: no in-between frame), ghostColor }
@@ -143,6 +182,7 @@ export function bake(opts) {
     return a;
   };
   const pl = rigFor('bake:' + id, opts.slim);
+  const prevRot = {};
   const rawPose = (t, extra) => {
     const te = warp(t);
     const p = { legSpace: 'root', vis: 1, ghost: opts.ghostColor ? 1 : 0 };
@@ -152,7 +192,8 @@ export function bake(opts) {
     p.plant = sp.plant ? sample(sp.plant, te) : 0;
     const life = ctrl('life', te), shake = ctrl('shake', te);
     for (const n of PARTS) for (const tr of [n, n + '.pos']) {
-      const v = (sp[tr] ? sample(sp[tr], te) : [0, 0, 0]).slice();
+      const v = sp[tr] ? (tr === n ? sampleRot(n, sp[tr], te, prevRot[n]) : sample(sp[tr], te).slice()) : [0, 0, 0];
+      if (tr === n) prevRot[n] = v.slice();
       const c = calmOf(tr), calm = c ? ctrl(c, te) : 1;
       const L = LIFE[tr], S = SHAKE[tr], seed = (PARTS.indexOf(n) + 1) * 3.1 + (tr.endsWith('.pos') ? 17 : 0) + (opts.seed || 0) * 11;
       for (let k = 0; k < 3; k++) {
@@ -165,11 +206,29 @@ export function bake(opts) {
     return { p, te };
   };
   // ---- contacts: solve '<limb>.pos' at key times so the bone point lands on the target ----
+  const keyAt = (tr, t, ease) => {
+    sp[tr] ||= [[0, [0, 0, 0], 'linear']];
+    let k = sp[tr].find(q => Math.abs(q[0] - t) < 1e-6);
+    if (!k) { k = [t, sample(sp[tr], t).slice(), ease || 'smooth']; sp[tr].push(k); sp[tr].sort((a, b) => a[0] - b[0]); }
+    return k;
+  };
   for (const r of opts.reach || []) {
     const tr = r.limb + '.pos';
-    sp[tr] ||= [[0, [0, 0, 0], 'linear']];
-    let k = sp[tr].find(q => Math.abs(q[0] - r.t) < 1e-6);
-    if (!k) { k = [r.t, sample(sp[tr], r.t).slice(), r.ease || 'smooth']; sp[tr].push(k); sp[tr].sort((a, b) => a[0] - b[0]); }
+    const k = keyAt(tr, r.t, r.ease);
+    // aim: point the limb at the target first (twist = r.aim deg), the rest is the thrust out of the socket
+    if (r.aim !== undefined) {
+      const ka = keyAt(r.limb, r.t, r.ease);
+      for (let it = 0; it < 3; it++) {
+        const { p } = rawPose(r.t);
+        place(pl, p);
+        const g = pl.parts[r.limb], pv = new THREE.Vector3(); g.getWorldPosition(pv);
+        const tg = evalPt(r.target, r.t);
+        const d = new THREE.Vector3(tg[0] - pv.x, tg[1] - pv.y, tg[2] - pv.z);
+        const q = new THREE.Quaternion(); g.parent.getWorldQuaternion(q);
+        d.applyQuaternion(q.invert());
+        ka[1] = aim(r.limb, [d.x, d.y, -d.z], r.aim);
+      }
+    }
     for (let it = 0; it < 3; it++) {
       const { p } = rawPose(r.t);
       place(pl, p);
@@ -182,7 +241,8 @@ export function bake(opts) {
       k[1] = [k[1][0] + d.x, k[1][1] + d.y, k[1][2] - d.z];
     }
     r.solved = k[1].map(v => +v.toFixed(2));
-    if (opts.log) console.log(`[kit] ${id} reach ${r.limb} @${r.t}: ${tr} = [${r.solved.join(', ')}] px`);
+    if (opts.log) console.log(`[kit] ${id} reach ${r.limb} @${r.t}: ${tr} = [${r.solved.join(', ')}] px (|${Math.hypot(...r.solved).toFixed(1)}|)` +
+      (r.aim !== undefined ? `  ${r.limb} = [${sample(sp[r.limb], r.t).map(v => v.toFixed(1)).join(', ')}]` : ''));
   }
   // ---- dense bake ----
   const out = {};
