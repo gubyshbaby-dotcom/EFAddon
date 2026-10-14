@@ -188,6 +188,7 @@ void main() {
   vFade = smoothstep(uNear * 0.35, uNear, depth) * clamp(aW.x / w, 0.4, 1.0);
   vWP = uWorld > 0.5 ? mix(aA, aB, position.x) : vec3(0.0);
   gl_Position = projectionMatrix * vec4(p, 1.0);
+  if (max(-a.z, -b.z) < uNear * 0.35) gl_Position = vec4(0.0, 0.0, -2.0, 1.0); // both ends inside the near fade: skip
 }`;
 const BEAM_FS = `
 uniform float uTime; uniform float uHaloK; uniform float uGlitch; uniform vec4 uWave; uniform vec3 uWaveC; uniform float uWaveW;
@@ -396,7 +397,7 @@ void main() {
   float scan = 0.8 + 0.2 * step(0.5, fract(uv.y * uDetail * 0.5 - uTime * 1.5));
   float frame = pow(edge, 14.0);
   // dark alien crystal: little emissive per layer, so a stack of faces converges to emissive/alpha (stays dark)
-  em = vec3(0.006, 0.002, 0.02) * (0.5 + sw * 2.0) + pal * (sw * sw * 0.07 + fres * 0.04 + frame * 0.22) * scan + vec3(0.7, 0.62, 0.9) * star * (1.0 - fres);
+  em = vec3(0.006, 0.002, 0.02) * (0.5 + sw * 2.0) + pal * (sw * sw * 0.13 + fres * 0.08 + frame * 0.22) * scan + vec3(0.7, 0.62, 0.9) * star * (1.0 - fres);
   a = uOpen * (0.2 + 0.2 * fres + 0.1 * sw);
   // swallow ripple rings
   em += mix(pal, vec3(1.0), 0.4) * ring * 0.6;
@@ -408,9 +409,11 @@ void main() {
   em += mix(pal, vec3(1.0), 0.6) * wipe * 0.8 + pal * closed * (0.02 + 0.04 * sw);
   a += closed * 0.22;
   // cracks (exit)
-  vec4 ck = texture2D(uCrackTex, uv);
-  float lit = ck.r * step(ck.g, uCrack) * step(0.001, uCrack);
-  em += mix(pal, vec3(1.3, 1.2, 1.6), 0.6) * lit + pal * ck.b * step(ck.a, uCrack) * step(0.001, uCrack) * 0.15;
+  if (uCrack > 0.0) {
+    vec4 ck = texture2D(uCrackTex, uv);
+    float lit = ck.r * step(ck.g, uCrack);
+    em += mix(pal, vec3(1.3, 1.2, 1.6), 0.6) * lit + pal * ck.b * step(ck.a, uCrack) * 0.15;
+  }
   em += pal * uFlash * 0.08;
   a = clamp(a, 0.0, 0.9);
 #else
@@ -572,8 +575,8 @@ function worldAngles(t) {
   for (const k of Object.keys(ROT)) A[k] = sample(ROT[k], t) * Q;
   // breathing: the inner cell drifts a little at rest so the object is never dead still
   const br = smooth(2.3, 2.6, t) * (1 - smooth(2.86, 2.98, t));
-  A.yw += br * 0.07 * Math.sin(t * Math.PI * 2 / (BEAT * 4));
-  A.xw += br * 0.05 * Math.sin(t * Math.PI * 2 / (BEAT * 2) + 1);
+  A.yw += br * 0.16 * Math.sin(t * Math.PI * 2 / (BEAT * 4));
+  A.xw += br * 0.11 * Math.sin(t * Math.PI * 2 / (BEAT * 2) + 1);
   return A;
 }
 const T_SEED = 1.2, T_REL = 1.62, T_UNF = 1.8, T_SHUT = 3.0, T_DIVE = 3.2, T_IN = 3.4, T_EXIT = 9.65, T_SHAT = 9.78;
@@ -684,7 +687,7 @@ export function create(ctx) {
   ring.rotation.x = -Math.PI / 2; ring.position.set(CUBE.x, 0.016, CUBE.z); ring.renderOrder = 2;
   world.add(ring);
   // exit shards: thin square crystal plates
-  const NSH = 120;
+  const NSH = 90;
   const shGeo = new THREE.BoxGeometry(1, 1, 1);
   const shAttr = new THREE.InstancedBufferAttribute(new Float32Array(NSH * 4), 4); shAttr.setUsage(THREE.DynamicDrawUsage);
   shGeo.setAttribute('aSh', shAttr);
@@ -718,7 +721,7 @@ export function create(ctx) {
   const light = new THREE.PointLight(0x9a70ff, 0, 14, 2); scene.add(light);
 
   // shard plan (closed form, drag): p(τ) = p0 + vt·τ + (v0 − vt)(1 − e^{−kτ})/k
-  const SK = 1.7, SVT = -1.3, SH0 = 0.95;
+  const SK = 1.7, SVT = -1.9, SH0 = 0.95;
   const shPlan = [];
   for (let i = 0; i < NSH; i++) {
     const h = k => hash(i, 300 + k);
@@ -733,7 +736,7 @@ export function create(ctx) {
     q0.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), h(11) * Math.PI));
     const spinAx = new THREE.Vector3(h(12) - 0.5, h(13) - 0.5, h(14) - 0.5).normalize();
     const size = 0.1 + 0.36 * h(15) * h(15);
-    const pl = { p0: new THREE.Vector3(...p0).add(EXIT), v0, q0, spinAx, w0: 7 + 16 * h(16), w1: 0.8 + 2.4 * h(17), size, seed: h(18), life: 1.8 + 1.9 * h(19) };
+    const pl = { p0: new THREE.Vector3(...p0).add(EXIT), v0, q0, spinAx, w0: 7 + 16 * h(16), w1: 0.8 + 2.4 * h(17), size, seed: h(18), life: 1.1 + 2.4 * h(19) * h(19) };
     // dissolve start: life end, or just before reaching the grass
     let td = pl.life;
     for (let tau = 0.3; tau < pl.life; tau += 1 / 60) if (shardPos(pl, tau, _a).y < 0.35 + size * 0.5) { td = tau; break; }
@@ -782,7 +785,7 @@ export function create(ctx) {
   }
   function exitScale(t) {
     if (t < T_SHAT) return lerp(CUBE_H, SH0, Math.pow(ramp(T_EXIT, T_SHAT, t), 2.2));
-    return lerp(SH0, 7.5, expoOut(ramp(T_SHAT, T_SHAT + 0.45, t)));
+    return lerp(SH0, 6.5, expoOut(ramp(T_SHAT, T_SHAT + 0.3, t)));
   }
 
   function update(t, f) {
@@ -811,9 +814,9 @@ export function create(ctx) {
         flare = 0.5 + 0.2 * beat + 1.0 * Math.exp(-Math.max(0, t - T_SHUT) * 10) * (t >= T_SHUT ? 1 : 0);
         face = 1;
       } else if (st.ph === 'exit') {
-        const im = ramp(T_EXIT, T_SHAT, t), out = ramp(T_SHAT, T_SHAT + 0.45, t);
-        edge = t < T_SHAT ? lerp(1.8, 3.2, im) : 3.2 * Math.pow(1 - out, 1.5);
-        flare = t < T_SHAT ? lerp(1.2, 2.6, im) : 2.5 * Math.pow(1 - out, 2);
+        const im = ramp(T_EXIT, T_SHAT, t), out = ramp(T_SHAT, T_SHAT + 0.3, t);
+        edge = t < T_SHAT ? lerp(1.2, 2.0, im) : 1.4 * Math.pow(1 - out, 2.5);
+        flare = t < T_SHAT ? lerp(0.6, 1.2, im) : 1.0 * Math.pow(1 - out, 3);
         face = t < T_SHAT ? 1 : 0;
       }
       tess.beams.u.uGlitch.value = st.ph === 'exit' && t < T_SHAT ? 0.35 : 0;
@@ -828,6 +831,10 @@ export function create(ctx) {
       uDetail: st.s < 0.3 ? 8 : 16,
       uRipC: S.pc, uRipAge: st.ph === 'cube' ? t - S.tc : -1, uRipAmp: 1,
     };
+    // small (seed) scale: colour-led edges and glowing faces so the 4D object reads at 0.15 bl
+    const small = 1 - smooth(0.12, 0.8, st.s);
+    tess.beams.u.uCoreI.value = lerp(0.85, 0.5, small);
+    if (P.face > 0) P.face *= 1 + 2.5 * small;
     if (DBG.includes('noface')) P.face = 0;
     if (DBG.includes('notess')) P.s = 0;
     tess.update(P);
@@ -841,7 +848,7 @@ export function create(ctx) {
       else if (st.ph === 'seed') li = 0.04 + 0.02 * beat;
       else if (st.ph === 'throw') li = 0.4;
       else if (st.ph === 'cube') li = lerp(1, 7, smooth(T_UNF, 2.0, t)) + 8 * Math.exp(-Math.max(0, t - T_SHUT) * 8) * (t >= T_SHUT ? 1 : 0) + 6 * smooth(T_DIVE, T_IN, t) + 6 * Math.exp(-Math.max(0, t - T_UNF) * 6) * (t >= T_UNF ? 1 : 0);
-      else if (st.ph === 'exit') li = t < T_SHAT ? lerp(6, 14, ramp(T_EXIT, T_SHAT, t)) : 30 * Math.exp(-(t - T_SHAT) * 4.5);
+      else if (st.ph === 'exit') li = t < T_SHAT ? lerp(4, 9, ramp(T_EXIT, T_SHAT, t)) : 14 * Math.exp(-(t - T_SHAT) * 6);
       light.intensity = DBG.includes('nolight') ? 0 : li;
       light.distance = st.ph === 'seed' || st.ph === 'gather' ? 2.5 : 16;
     }
@@ -1069,10 +1076,10 @@ export function create(ctx) {
     }
     const a = t - T_SHAT;
     // core flash
-    if (a < 0.3) {
-      const u = a / 0.3;
-      Sp.push(C, 1.0 + 4 * expoOut(u), 2, [1, 0.9, 1], 2.2 * Math.pow(1 - u, 2.5), 0.25);
-      Sp.push(C, 1.0 + 7 * expoOut(u), 3, COL.magenta, 1.4 * Math.pow(1 - u, 2), 0);
+    if (a < 0.2) {
+      const u = a / 0.2;
+      Sp.push(C, 0.8 + 3 * expoOut(u), 2, [1, 0.9, 1], 1.5 * Math.pow(1 - u, 3), 0.25);
+      Sp.push(C, 1.0 + 6 * expoOut(u), 3, COL.magenta, 1.0 * Math.pow(1 - u, 2), 0);
     }
     // god rays
     if (a < 1.1) for (let i = 0; i < 14; i++) {
@@ -1082,7 +1089,7 @@ export function create(ctx) {
       if (u >= 1) continue;
       const L = (7 + 12 * h(4)) * expoOut(clamp(a / 0.12));
       const fl = 0.8 + 0.2 * Math.sin(t * 60 + i * 3);
-      B.push(C.clone().addScaledVector(dir, 0.3), C.clone().addScaledVector(dir, L), (0.05 + 0.12 * h(5)) * (1 - u * 0.6), [1, 0.92, 1], 1.5 * Math.pow(1 - u, 1.8) * fl, h(6) < 0.5 ? COL.violet : COL.cyan, 0);
+      B.push(C.clone().addScaledVector(dir, 0.3), C.clone().addScaledVector(dir, L), (0.04 + 0.09 * h(5)) * (1 - u * 0.6), [1, 0.92, 1], 1.1 * Math.pow(1 - u, 2) * fl, h(6) < 0.5 ? COL.violet : COL.cyan, 0);
     }
     // debris sparkle (fast pixel bits)
     for (let i = 0; i < 160; i++) {
@@ -1110,7 +1117,7 @@ export function create(ctx) {
       }
     }
     // lingering motes: blown out by the blast, then float through the title
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < 34; i++) {
       const h = k => hash(i, 1100 + k);
       const dir = new THREE.Vector3(h(0) - 0.5, h(1) * 0.7 - 0.2, h(2) - 0.5).normalize();
       const sp = 3 + 8 * h(3), k = 2.6, e = (1 - Math.exp(-k * a)) / k;
@@ -1119,8 +1126,8 @@ export function create(ctx) {
       p.x += 0.2 * Math.sin(a * (0.5 + 0.4 * h(6)) + h(7) * 6);
       if (p.y < 0.25) p.y = 0.25 + (0.25 - p.y) * 0.2;
       const tw = 0.6 + 0.4 * Math.sin(t * (4 + 4 * h(8)) + h(9) * 6);
-      const fade = smooth(0, 0.3, a) * (1 - smooth(4.0 + 0.6 * h(10), 4.75, a));
-      Sp.push(p, 0.025 + 0.03 * h(11), h(12) < 0.6 ? 0 : 1, fractCol(h(13)), 2.0 * tw * fade, 0);
+      const fade = smooth(0, 0.3, a) * (1 - smooth(4.0 + 0.6 * h(10), 4.75, a)) * (1 - 0.45 * smooth(2.1, 2.5, a));
+      Sp.push(p, 0.02 + 0.022 * h(11), h(12) < 0.6 ? 0 : 1, fractCol(h(13)), 1.6 * tw * fade, 0);
     }
   }
   function fractCol(x) { const k = (x * 3.7) % 1; return k < 0.45 ? COL.violet : k < 0.75 ? COL.magenta : COL.cyan; }
@@ -1187,12 +1194,12 @@ export function post(t, p, f) {
       p.chroma = Math.max(p.chroma, 0.3 * u);
     } else {
       const a = t - T_SHAT;
-      const fl = 0.6 * Math.exp(-a * 16);
-      if (fl > p.flash) { p.flash = fl; p.flashColor = [0.85, 0.7, 1.0]; }
-      p.chroma = Math.max(p.chroma, 0.45 * Math.exp(-a * 8));
-      p.radial = Math.max(p.radial, 0.5 * Math.exp(-a * 7));
+      const fl = 0.35 * Math.exp(-a * 28);
+      if (fl > p.flash) { p.flash = fl; p.flashColor = [0.8, 0.65, 1.0]; }
+      p.chroma = Math.max(p.chroma, 0.3 * Math.exp(-a * 12));
+      p.radial = Math.max(p.radial, 0.3 * Math.exp(-a * 14));
       if (a < 0.4) p.radialCenter = sc;
-      p.bloom.strength = Math.max(p.bloom.strength, 0.55 + 0.4 * Math.exp(-a * 6));
+      p.bloom.strength = Math.max(p.bloom.strength, 0.55 + 0.2 * Math.exp(-a * 10));
     }
   }
   return p;

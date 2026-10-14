@@ -74,8 +74,8 @@ function flashOf(t, k = 9) {
 const LAT = [
   // s = outer half size; spd = 4D plane speeds (xw, yw, zw) on the lattice clock; spin = slow 3D turn. The fighters and the
   // camera live inside L0's inner cell (half s/2), so no edge cuts between the camera and the fight most of the time.
-  { s: 6.8, edgeW: 0.008, flareS: 0.03, edge: 0.4, flare: 0.22, coreI: 0.95, faces: null, spd: [0.55, 0.33, -0.21], spin: 0.06, hue: 0.0, near: 1.4, tilt: 0.3 },
-  { s: 15, edgeW: 0.0065, flareS: 0.026, edge: 0.34, flare: 0.2, coreI: 0.75, faces: 'lattice', spd: [-0.29, 0.41, 0.17], spin: -0.035, hue: 0.12, near: 2, tilt: -0.5 },
+  { s: 6.8, edgeW: 0.008, flareS: 0.03, edge: 0.4, flare: 0.22, coreI: 0.95, faces: null, spd: [0.55, 0.33, -0.21], spin: 0.06, hue: 0.0, near: 2.6, tilt: 0.3 },
+  { s: 15, edgeW: 0.0065, flareS: 0.026, edge: 0.34, flare: 0.2, coreI: 0.75, faces: 'lattice', spd: [-0.29, 0.41, 0.17], spin: -0.035, hue: 0.12, near: 3, tilt: -0.5 },
   { s: 36, edgeW: 0.0055, flareS: 0.024, edge: 0.28, flare: 0.18, coreI: 0.6, faces: null, spd: [0.19, -0.15, 0.31], spin: 0.02, hue: -0.18, near: 3, tilt: 0.9 },
   { s: 85, edgeW: 0.005, flareS: 0.022, edge: 0.24, flare: 0.16, coreI: 0.5, faces: null, spd: [-0.11, 0.09, -0.07], spin: -0.012, hue: 0.25, near: 4, tilt: -1.1 },
 ];
@@ -168,7 +168,7 @@ export function create(ctx) {
     _r.crossVectors(_f, _u).normalize();                          // camera right
     const hp = flashOf(t, 14);
     const dark = smooth(T_RING, T_GAP, t) * (1 - smooth(T_MEGA, T_MEGA + 0.3, t));
-    const mega = t >= T_MEGA ? Math.exp(-Math.max(0, te - effTime(T_MEGA)) * 3) : 0;
+    const mega = t >= T_MEGA ? Math.exp(-Math.max(0, te - effTime(T_MEGA)) * 6) : 0;
     lights.sun.color.copy(KEYC);
     lights.sun.intensity = (1.7 + 0.5 * hp) * (1 - 0.45 * dark) + 3 * mega;
     lights.sun.position.copy(_c).addScaledVector(_f, -6).addScaledVector(_r, -3.5).addScaledVector(_u, 6);
@@ -189,7 +189,7 @@ export function create(ctx) {
     const col = ramp(T_SLOW, T_HAM + 0.04, t), colE = col * col * col;
     const sw = swell(t);
     const focus = smooth(T_RING, T_GAP, t) * (1 - smooth(T_MEGA, T_MEGA + 0.25, t));
-    const megaKick = t >= T_MEGA ? Math.exp(-Math.max(0, te - effTime(T_MEGA)) * 5) : 0;
+    const megaKick = t >= T_MEGA ? Math.exp(-Math.max(0, te - effTime(T_MEGA)) * 10) : 0;
     const crack = Math.pow(ramp(T_CRACK, T_HAM, t), 0.8);
     const hits = lastHits(t, 2);
     const cen = I.clone().lerp(vch, 0.35 + 0.65 * colE);
@@ -211,7 +211,7 @@ export function create(ctx) {
       u.uGlitch.value = 0.45 * crack * (k < 2 ? 1 : 0.5);
       u.uFocus.value.set(H.focusScreen[0], H.focusScreen[1], (k < 2 ? 0.75 : 0.5) * (1 - colE));
       T.update({
-        c: cen, s: sc, A, edge: L.edge * bright, flare: L.flare * bright, face: T.faceMesh && (crack > 0 || megaKick > 0.02 || colE > 0) ? 1 : 0, hue: L.hue,
+        c: cen, s: sc, A, edge: L.edge * bright, flare: L.flare * bright, face: T.faceMesh && (crack > 0 || megaKick > 0.02) ? 1 - smooth(T_SLOW, T_SLOW + 0.22, t) : 0, hue: L.hue,
         flowN: 2, flowS: 0.8 + 1.4 * (rate(t) - 1) / 1.8,
         uCrack: crack, uFlash: 0.15 * Math.min(1.2, flashOf(t, 10)) + 0.3 * megaKick + 0.3 * colE,
       });
@@ -247,13 +247,13 @@ export function create(ctx) {
     if (t >= T_RING && t < T_MEGA + 0.3) {
       const pre = t < T_MEGA, a = t - T_MEGA;
       const R = pre ? lerp(2.8, 2.05, smooth(T_RING, T_GAP, t)) : 2.05 + 14 * expoOut(clamp((effTime(t) - effTime(T_MEGA)) / 0.5));
-      const inten = pre ? 1.4 * smooth(T_RING, T_GAP + 0.05, t) * (t >= T_GAP ? 1.25 : 1) : 2.4 * Math.exp(-Math.max(0, effTime(t) - effTime(T_MEGA)) * 9);
+      const inten = pre ? 1.4 * smooth(T_RING, T_GAP + 0.05, t) * (t >= T_GAP ? 1.25 : 1) : 1.6 * Math.exp(-Math.max(0, effTime(t) - effTime(T_MEGA)) * 9);
       const cy = vch.y;
       const NS = 64;
       for (let s = 0; s < NS; s++) {
         const a0 = (s / NS) * Math.PI * 2 + th * 0.2, a1 = ((s + 1) / NS) * Math.PI * 2 + th * 0.2;
         const fl = 0.75 + 0.25 * Math.sin(s * 1.7 + t * 30);
-        B.push([vch.x + Math.cos(a0) * R, cy, vch.z + Math.sin(a0) * R], [vch.x + Math.cos(a1) * R, cy, vch.z + Math.sin(a1) * R], 0.02 + (pre ? 0 : 0.06), COL.cyan, inten * fl, COL.violet, inten * fl);
+        B.push([vch.x + Math.cos(a0) * R, cy, vch.z + Math.sin(a0) * R], [vch.x + Math.cos(a1) * R, cy, vch.z + Math.sin(a1) * R], 0.02 + (pre ? 0 : 0.035), COL.cyan, inten * fl, COL.violet, inten * fl);
       }
     }
     B.end();

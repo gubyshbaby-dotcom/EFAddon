@@ -18,7 +18,7 @@ const ST_R = [-0.22, 0, -4.24];                // stumble step when yanked round
 
 const keys = [
   // ---- guard: bladed left-forward stance, hands high, chin down; own breathing rhythm ----
-  K(0.00, { yaw: 180, rot: [0, 0], footL: G_L, footR: G_R, torso: [12, -18, 3], head: [8, 0, 2], look: USER_HEAD, lookW: 1,
+  K(0.00, { yaw: 180, rot: [0, 0], bias: 0, footL: G_L, footR: G_R, torso: [12, -18, 3], head: [8, 0, 2], look: USER_HEAD, lookW: 1,
     armL: [112, 22, 18], armR: [96, 34, 20], shake: 0.5 }),
   K(0.33, { torso: [14, -16, 2], armL: [108, 22, 17], armR: [93, 34, 19] }, 'sineInOut'),
   K(0.52, { torso: [11, -19, 3], armL: [113, 23, 18], armR: [97, 35, 20], footL: G_L }, 'sineInOut'),
@@ -50,11 +50,11 @@ const keys = [
     footR: [-0.26, 0.12, -4.30] }, 'quadOut', { armL: 'sineInOut', armR: 'sineInOut' }),
   K(2.49, { yaw: 194, footR: ST_R, torso: [-6, 6, -5] }, 'quadIn', { yaw: 'sineOut' }),
   K(2.555, { torso: [-9, 5, -6], head: [-6, 0, -4], armL: [120, 38, 22], armR: [126, 42, 18], shake: 0.8 }, 'sineOut'),
-  K(2.583, { torso: [-7, 4, -5], head: [-4, 0, -2], armL: [118, 34, 28], armR: [122, 38, 26], lookW: 1, rot: [0, 0], shake: 0.4 }, 'linear'),
+  K(2.583, { torso: [-7, 4, -5], head: [-4, 0, -2], armL: [118, 34, 28], armR: [122, 38, 26], lookW: 1, rot: [0, 0], shake: 0.4, bias: 0 }, 'linear'),
   // ---- 2.60 KICK in the belly: folds over the sole (contact frame), held through the hit-stop ----
-  K(2.60, { yaw: 194, bias: 25, footR: ST_R, footL: LB_L, torso: [36, 0, 4], head: [38, 0, 6], armL: [92, 8, 76], armR: [96, 6, 72],
+  K(2.60, { yaw: 194, bias: -28, footR: ST_R, footL: LB_L, torso: [36, 0, 4], head: [38, 0, 6], armL: [92, 8, 76], armR: [96, 6, 72],
     lookW: 0, look: USER_DASH, shake: 0, rot: [0, 0] }, 'expoIn'),
-  K(2.65, { yaw: 194, footR: ST_R, footL: LB_L, torso: [36, 0, 4], head: [38, 0, 6], armL: [92, 8, 76], armR: [96, 6, 72],
+  K(2.65, { yaw: 194, bias: -28, footR: ST_R, footL: LB_L, torso: [36, 0, 4], head: [38, 0, 6], armL: [92, 8, 76], armR: [96, 6, 72],
     lookW: 0, look: USER_DASH, shake: 0, rot: [0, 0] }, 'linear'),
   // ---- knockback: the belly leads, head/arms/legs drag toward the user; rising toward the cube face ----
   K(2.70, { legR: [44, 6, 14], legL: [30, -4, 12], torso: [44, 2, 6], head: [40, 0, 8], armL: [102, 8, 76], armR: [106, 6, 72],

@@ -89,7 +89,7 @@ const keys = [
   K(2.555, { footL: t => vBelly(t), reachLegL: 4, 'legL.pos': [0, 0, -4], at: [0.29, -3.04], torso: [-14, 4, -2],
     armL: [30, 22, 56], armR: [6, 22, 74] }, 'sineOut'),
   // ---- 2.60 HEAVY PUSH KICK (cut on the contact): hips surge, torso throws back, the sole drives into the belly ----
-  K(2.60, { footL: t => vBelly(t), reachLegL: 4, 'legL.pos': [0, 0, 0], at: [0.30, -3.16], torso: [-28, 12, -6], head: [22, 0, 0],
+  K(2.60, { footL: t => vBelly(t), reachLegL: 4, 'legL.pos': [0, 0, 0], at: [0.30, -3.10], torso: [-28, 12, -6], head: [22, 0, 0],
     armL: [-36, 0, 74], armR: [-42, 20, 70], shake: 0, look: vHead }, 'expoIn'),
   K(2.65, { look: vHead }, 'linear'),
   // ---- follow-through: the leg rises on, body leans back, then the kick foot comes down forward ----

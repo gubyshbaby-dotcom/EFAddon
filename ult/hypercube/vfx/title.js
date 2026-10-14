@@ -85,6 +85,7 @@ export function create(ctx) {
 
   return {
     update(t) {
+      t += 2e-4;
       const fade = 1 - fadeAt(t);
       if (t < T_IN || t >= T_END + 0.05) { root.style.display = 'none'; lineFlash.style.display = 'none'; return; }
       const fr = Math.floor(t * 60 + 0.02);

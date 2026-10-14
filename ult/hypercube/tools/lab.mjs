@@ -1,4 +1,4 @@
-// Pose lab: node tools/lab.mjs <actor> <t1,t2,...> <out.jpg> [--views side,front,back] [--size 400x400] [--vfx]
+// Pose lab: node tools/lab.mjs <actor> <t1,t2,...> <out.jpg> [--views side,front,back] [--size 400x400] [--vfx] [--userdef ./lib/study/x.js]
 // Renders each time from fixed views around the actor (relative to its heading): rows = times, columns = views.
 // Use it to judge stances and silhouettes (weight, feet on the ground, lean, guard) independently of the shot camera.
 import { execFileSync } from 'node:child_process';
@@ -14,7 +14,7 @@ const views = opt('--views', 'side,front,back').split(','), size = opt('--size',
 const [w, h] = size.split('x').map(Number);
 const ts = times.split(',').map(Number);
 const tmp = mkdtempSync(join(tmpdir(), 'lab-'));
-for (const v of views) execFileSync('node', [join(HERE, 'render.mjs'), '--times', ts.join(','), '--size', size, '--out', join(tmp, v), '--lab', `${actor}:${v}`, ...(a.includes('--vfx') ? [] : ['--novfx'])], { stdio: ['ignore', 'ignore', 'inherit'] });
+for (const v of views) execFileSync('node', [join(HERE, 'render.mjs'), '--times', ts.join(','), '--size', size, '--out', join(tmp, v), '--lab', `${actor}:${v}`, ...(a.includes('--vfx') ? [] : ['--novfx']), ...(opt('--userdef', null) ? ['--userdef', opt('--userdef')] : [])], { stdio: ['ignore', 'ignore', 'inherit'] });
 const files = []; for (const t of ts) for (const v of views) files.push([join(tmp, v, `t_${t.toFixed(3)}.png`), `${t.toFixed(2)} ${v}`]);
 const inputs = files.flatMap(([f]) => ['-i', f]);
 const labels = files.map(([, l], i) => `[${i}:v]drawtext=text='${l}':x=6:y=6:fontsize=18:fontcolor=yellow:box=1:boxcolor=black@0.6[v${i}]`);

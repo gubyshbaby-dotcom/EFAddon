@@ -1,5 +1,5 @@
 // Frame-exact render of the ult: node render.mjs [--fps 60] [--size 1280x720] [--from 0] [--to 15] [--out out/ult]
-//   [--times 0.5,1.2,...] (only these frames, as PNG) [--sheet cols] [--debug] [--noaudio] [--novfx] [--lab user:side]
+//   [--times 0.5,1.2,...] (only these frames, as PNG) [--sheet cols] [--debug] [--noaudio] [--novfx] [--lab user:side] [--userdef ./lib/study/x.js]
 // Video: out/<name>/ult.mp4 (+ audio/out/mix.wav when present). Frames: out/<name>/frames/f_%05d.jpg
 import { createServer } from 'node:http';
 import { readFileSync, existsSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
@@ -37,7 +37,7 @@ page.setDefaultTimeout(300000);
 const errors = [];
 page.on('pageerror', e => { errors.push(e.message); console.error('[pageerror]', e.message); });
 page.on('console', m => { if (m.type() === 'error') { errors.push(m.text()); console.error('[console]', m.text()); } });
-const extra = (a.includes('--debug') ? '&debug' : '') + (a.includes('--novfx') ? '&novfx' : '') + (opt('--lab', null) ? '&lab=' + encodeURIComponent(opt('--lab')) : '');
+const extra = (opt('--userdef', null) ? '&userdef=' + encodeURIComponent(opt('--userdef')) : '') + (opt('--victimdef', null) ? '&victimdef=' + encodeURIComponent(opt('--victimdef')) : '') + (a.includes('--debug') ? '&debug' : '') + (a.includes('--novfx') ? '&novfx' : '') + (opt('--lab', null) ? '&lab=' + encodeURIComponent(opt('--lab')) : '');
 await page.goto(`http://localhost:${server.address().port}/page.html?w=${W}&h=${H}${extra}`);
 await page.waitForFunction(() => window.sceneReady === true || window.sceneError, null, { timeout: 300000 });
 await page.waitForTimeout(800); // textures

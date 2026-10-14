@@ -4,8 +4,7 @@ import * as TL from './timeline.js';
 import { poseAt, makePlayer, applyPose, bonePoint } from './rig.js';
 import { cameraAt } from './camera.js';
 import { createPost, basePost, applyPost } from './post.js';
-import USER from './anim/user.js';
-import VICTIM from './anim/victim.js';
+
 import CLONES from './anim/clones.js';
 import { createVfx } from './vfx/index.js';
 
@@ -15,6 +14,9 @@ const DEBUG = params.has('debug');
 // pose lab: ?lab=<actorId>:<view> (view: side | front | back | top | left) — a fixed camera around the actor, no letterbox;
 // ?novfx — skip VFX (pure animation check)
 const LAB = params.get('lab'), NOVFX = params.has('novfx');
+// ?userdef=<module path> / ?victimdef=… : load another actor definition (studies, A/B tests); paths relative to page.html
+const USER = (await import(params.get('userdef') || './anim/user.js')).default;
+const VICTIM = (await import(params.get('victimdef') || './anim/victim.js')).default;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setSize(W, H);
@@ -67,13 +69,13 @@ function makeActor(def, opts = {}) {
   return { def, player: pl };
 }
 const actors = { user: makeActor(USER), victim: makeActor(VICTIM), clones: [] };
-for (const c of CLONES) actors.clones.push(makeActor({ skin: USER.skin, slim: USER.slim, ...c }, { ghost: ghostMat(c.ghostColor || 0x9a7cff) }));
+for (const c of CLONES) actors.clones.push(makeActor({ skin: USER.skin, slim: USER.slim, legSpace: USER.legSpace, ...c }, { ghost: ghostMat(c.ghostColor || 0x9a7cff) }));
 const byId = { user: actors.user, victim: actors.victim };
 actors.clones.forEach((c, i) => (byId[c.def.id || 'clone' + i] = c));
 
 const hud = document.getElementById('hud');
 const ctx = { THREE, scene, renderer, camera, world, inside, actors, tl: TL, tex, hud, W, H, lights: { hemi, sun } };
-const vfx = createVfx(ctx);
+const vfx = NOVFX ? { update() {} } : createVfx(ctx);
 const post = createPost(renderer, scene, camera, W, H);
 let postCurves = null;
 try { postCurves = (await import('./vfx/post_curves.js')).postCurves; } catch (e) { /* optional */ }

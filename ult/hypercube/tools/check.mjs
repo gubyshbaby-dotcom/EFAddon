@@ -11,6 +11,9 @@
 //   CAMIN  camera within 0.08 bl of / inside an actor box;  CAMLOW camera below the ground in the world
 //   OFF    both key actors off screen for > 0.15 s inside a shot
 //   SYNC   two clones moving their limbs the same way at the same time (correlation > 0.97 over 0.25 s)
+//   DETACH R6 style check: how far each limb's pivot sits out of its socket on the torso (px), per actor. The pack
+//          (the author's reference) keeps limbs out of their sockets almost always: mean ≈ 3 px, > 0.7 px in ~97% of
+//          frames. Pinned limbs (≈ 0 px) read as a "robot with stick legs" to the author.
 import * as THREE from 'three';
 import * as TL from '../timeline.js';
 import { poseAt, makePlayer, applyPose, bonePoint, PX } from '../rig.js';
@@ -26,7 +29,7 @@ const QUIET = a.includes('--quiet');
 
 const mk = def => ({ def, pl: makePlayer(THREE, null, def.slim) });
 const actors = { user: mk(USER), victim: mk(VICTIM) };
-CLONES.forEach((c, i) => (actors[c.id || 'clone' + i] = mk({ skin: USER.skin, slim: USER.slim, ...c })));
+CLONES.forEach((c, i) => (actors[c.id || 'clone' + i] = mk({ skin: USER.skin, slim: USER.slim, legSpace: USER.legSpace, ...c })));
 const ids = Object.keys(actors), cloneIds = ids.filter(i => i !== 'user' && i !== 'victim');
 const scene = new THREE.Scene();
 for (const id of ids) scene.add(actors[id].pl.root);
@@ -153,6 +156,8 @@ function mark(key, t, val) {
 }
 let prev = null, offRun = 0, offStart = 0;
 const hist = {}; // clone limb angle history for SYNC
+const SOCKET = (id, n) => ({ armR: [5, BOX[id] === BOX.victim && VICTIM.slim ? 3.5 : 4, 0], armL: [-5, BOX[id] === BOX.victim && VICTIM.slim ? 3.5 : 4, 0], legR: [1.9, -6, 0], legL: [-1.9, -6, 0] })[n];
+const det = {}; // id → limb → [sum, n, nOut]
 const N = Math.round((TO - FROM) * FPS);
 for (let i = 0; i <= N; i++) {
   const t = FROM + i / FPS;
@@ -188,6 +193,17 @@ for (let i = 0; i <= N; i++) {
       let mx = 0;
       cur[id].forEach((p, k) => (mx = Math.max(mx, p.distanceTo(prev.cur[id][k]))));
       if (mx > 0.45) mark(`${inWin(id, t) || (id === 'victim' && TL.HITS.some(h => t >= h.t && t <= h.t + 0.12)) ? 'POPHIT' : 'POP'} ${id} (${shot})`, t, mx);
+    }
+  }
+  // DETACH
+  for (const id of Object.keys(cur)) {
+    const tg = actors[id].pl.parts.torso;
+    for (const n of ['armR', 'armL', 'legR', 'legL']) {
+      const s0 = SOCKET(id, n), sock = new THREE.Vector3(s0[0] * PX, s0[1] * PX, 0).applyMatrix4(tg.matrixWorld);
+      const piv = new THREE.Vector3().setFromMatrixPosition(actors[id].pl.parts[n].matrixWorld);
+      const gap = piv.distanceTo(sock) / PX;
+      const d = ((det[id] ||= {})[n] ||= [0, 0, 0]);
+      d[0] += gap; d[1]++; if (gap > 0.72) d[2]++;
     }
   }
   // SLIDE
@@ -237,6 +253,14 @@ for (let x = 0; x < cloneIds.length; x++) for (let y = x + 1; y < cloneIds.lengt
   if (inRun) say(`SYNC ${cloneIds[x]}~${cloneIds[y]}  ${inRun[0].toFixed(2)}–${inRun[1].toFixed(2)}`);
 }
 
+for (const [id, limbs] of Object.entries(det)) {
+  const parts = Object.entries(limbs).map(([n, [sum, cnt, out]]) => {
+    const mean = sum / cnt, frac = out / cnt, ok = mean >= 1.5 && frac >= 0.6;
+    if (!ok) report.push(`DETACH ${id}.${n} mean ${mean.toFixed(1)} px, out of socket ${(frac * 100).toFixed(0)}% of frames  ✗ (pack ≈ 3 px, ≈ 97%)`);
+    return `${n} ${mean.toFixed(1)}px/${(frac * 100).toFixed(0)}%`;
+  });
+  console.log(`DETACH ${id}: ${parts.join('  ')}   (pack: ≈3px / ≈97%)`);
+}
 const kinds = {};
 for (const l of report) { const k = l.split(' ')[0]; if (k === 'HIT' && !l.includes('✗')) continue; kinds[k] = (kinds[k] || 0) + 1; }
 for (const l of report) if (!QUIET || !l.startsWith('HIT') || l.includes('✗')) console.log(l);

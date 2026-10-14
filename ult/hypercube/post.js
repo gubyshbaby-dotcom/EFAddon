@@ -35,7 +35,7 @@ export const FX_SHADER = {
     float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
     vec3 samp(vec2 uv){
       vec2 d = uv - uRadialCenter;
-      if (uRadial > 0.002) {
+      if (uRadial > 0.02) {           // below this the 16-tap loop is invisible: skip it (cost)
         // radial (zoom) blur + chromatic aberration along the radius
         vec3 c = vec3(0.0);
         vec2 ca = d * uChroma * 0.06;
@@ -48,7 +48,7 @@ export const FX_SHADER = {
         }
         return c / 16.0;
       }
-      if (uChroma > 0.002) {
+      if (uChroma > 0.01) {
         vec2 ca = d * uChroma * 0.06;
         return vec3(texture2D(tDiffuse, uv + ca).r, texture2D(tDiffuse, uv).g, texture2D(tDiffuse, uv - ca).b);
       }

@@ -38,7 +38,7 @@ const since = (t, t0) => fxClock(t) - fxClock(t0);
 const KIND = {
   light: { s: 0.26, n: 4, flash: 0.3, life: 0.07, sparks: 7, lines: 0, ring3: 0, smoke: 0, shards: 0, light: 4, rad: 0.5 },
   medium: { s: 0.42, n: 6, flash: 0.5, life: 0.1, sparks: 13, lines: 8, ring3: 1, smoke: 3, shards: 0, light: 9, rad: 0.8 },
-  heavy: { s: 0.7, n: 8, flash: 0.6, life: 0.14, sparks: 24, lines: 12, ring3: 2, smoke: 7, shards: 14, light: 22, rad: 1.4 },
+  heavy: { s: 0.7, n: 8, flash: 0.6, life: 0.12, sparks: 24, lines: 12, ring3: 2, smoke: 7, shards: 14, light: 22, rad: 1.4 },
   mega: { s: 0.75, n: 8, flash: 1.0, life: 0.2, sparks: 36, lines: 26, ring3: 2, smoke: 10, shards: 26, light: 45, rad: 2.2 },
 };
 
@@ -632,8 +632,11 @@ export function create(ctx) {
 
   // ------------------------------------------------------------------------------------------ hit bursts
   const Pt = new V3(), Pt2 = new V3(), Dv = new V3(), Vel = new V3();
-  function burst(kind, P, D, tau, sf, c1, c2, sd, inside, treal = tau) {
+  const Pc = new V3();
+  function burst(kind, P0, D, tau, sf, c1, c2, sd, inside, treal = tau) {
     const k = KIND[kind], s = k.s * sf, big = kind === 'heavy' || kind === 'mega';
+    // sit in front of the body surface (the contact is on/inside the victim; depth would eat the spark)
+    const P = Pc.copy(P0).add(tmp3.subVectors(cam, P0).setLength(Math.min(0.3, cam.distanceTo(P0) * 0.25)));
     // local flash (first frames, real time: a light event does not freeze)
     const lf = 0.03 + k.life * 0.2;
     if (treal < lf) {
@@ -650,12 +653,12 @@ export function create(ctx) {
       spr(B, P, s * (kind === 'mega' ? 0.45 : 0.62) * grow, 1, WHT, 1.3 * hot, 1, rot + Math.PI / k.n, k.n, sd + 3, hw * 1.2);
     }
     if (big) {
-      const l2 = k.life * 1.3, tt = tau - FR;
+      const l2 = k.life * 1.15, tt = tau - FR;
       if (tt >= 0 && tt < l2) { const u = tt / l2; spr(B, P, s * 1.45 * (1 + 0.3 * u), 1, c2, 1.5, 1 - u * u, R(sd, 2) * TAU, 14, sd + 5, 0.035 * (1 - u)); }
     }
     // billboard ring
     const lr = 0.1 + k.s * 0.12;
-    if (tau < lr) { const u = tau / lr; spr(B, P, s * (0.35 + 1.25 * (1 - Math.pow(1 - u, 3))), 3, WHT, 1.5, 1 - u, 0, 0.22 * (1 - u) + 0.04, 1); }
+    if (tau < lr && !big) { const u = tau / lr; spr(B, P, s * (0.35 + 1.25 * (1 - Math.pow(1 - u, 3))), 3, WHT, 1.5, 1 - u, 0, 0.22 * (1 - u) + 0.04, 1); }
     // pixel sparks (squares + short motion streaks)
     for (let j = 0; j < k.sparks; j++) {
       const life = 0.15 + R(sd, j, 2) * 0.22 * (1 + k.s);
@@ -672,11 +675,11 @@ export function create(ctx) {
     }
     // 3D shock rings across the push direction
     for (let rj = 0; rj < k.ring3; rj++) {
-      const tt = tau - rj * 0.035, life = 0.2 + 0.08 * rj + k.s * 0.1;
+      const tt = tau - rj * 0.035, life = 0.16 + 0.05 * rj + k.s * 0.06;
       if (tt < 0 || tt > life) continue;
       const u = tt / life, rad = k.rad * (0.8 + 0.5 * rj) * sf * (1 - Math.pow(1 - u, 3));
       Pt.copy(P).addScaledVector(D, (0.06 + rj * 0.1 + u * 0.25) * sf);
-      ring3(Pt, D, rad, 0.14 * (1 - u) + 0.035, rj ? c2 : WHT, rj ? 1.6 : 1.3, Math.pow(1 - u, 1.6), 1.5);
+      ring3(Pt, D, rad, 0.1 * (1 - u) + 0.03, rj ? c2 : WHT, rj ? 1.4 : 1.2, Math.pow(1 - u, 2), 1.5);
     }
     // impact speed lines bursting outward
     for (let j = 0; j < k.lines; j++) {
@@ -741,7 +744,7 @@ export function create(ctx) {
     if (h.kind === 'mega') {
       // every striker lands: a heavy burst each (staggered sizes), then one huge one at the victim
       const tr = t - h.t;
-      for (let ci = 0; ci < cs.length; ci++) if (!cs[ci].fallback || cs.length === 1) burst(cs.length > 1 ? 'medium' : 'mega', cs[ci].P, cs[ci].D, tau, scaleAt(cs[ci].P) * (cs.length > 1 ? 0.8 : 1), PAL[(i + ci) % 3], PAL[(i + ci + 1) % 3], sd + ci * 101, inside, tr);
+      for (let ci = 0; ci < cs.length; ci++) if (!cs[ci].fallback || cs.length === 1) burst(cs.length > 1 ? 'medium' : 'mega', cs[ci].P, cs[ci].D, tau, scaleAt(cs[ci].P) * (cs.length > 1 ? 0.55 : 1), PAL[(i + ci) % 3], PAL[(i + ci + 1) % 3], sd + ci * 101, inside, tr);
       if (cs.length > 1) {
         // the frozen tableau keeps the small strikes; the big burst goes off when time resumes
         const Vc = boneAt(defs.victim, h.t, 'chest'), t2 = t - (h.t + h.stop);
@@ -752,8 +755,6 @@ export function create(ctx) {
       for (let ci = 0; ci < cs.length; ci++) burst(h.kind, cs[ci].P, cs[ci].D, tau, scaleAt(cs[ci].P), c1, c2, sd + ci * 101, inside, t - h.t);
       offerLight(cs[0].P, k.light * Math.exp(-tau * 16), c1);
     }
-    // afterimages of the striker on medium+ user strikes
-    if (h.by === 'user' && h.kind !== 'light') for (let kk = 1; kk <= 2; kk++) wantGhost(defs.user, h.t - kk * 0.035, 0.5 * (1 - tau / 0.12) / kk, kk);
   }
 
   // ------------------------------------------------------------------------------------------ sections
@@ -926,8 +927,8 @@ export function create(ctx) {
         const sd = 300 + c.i * 17;
         if (ts >= 0) {
           const u = ts / 0.3;
-          if (ts < 0.1) spr(B, c.spawnAt, 0.7 * (1 + ts * 3), 0, WHT, 2.2, (1 - ts / 0.1) ** 2, 0, 1, 2);
-          spr(B, c.spawnAt, 0.3 + u * 0.6, 3, c.i % 2 ? CYA : MAG, 2.4, 1 - u, 0, 0.25, 1);
+          if (ts < 0.1) spr(B, c.spawnAt, 0.45 * (1 + ts * 3), 0, WHT, 1.4, (1 - ts / 0.1) ** 2, 0, 0.4, 2.4);
+          if (ts < 0.2) spr(B, c.spawnAt, 0.18 + ts * 1.6, 3, c.i % 2 ? CYA : MAG, 1.6, 1 - ts / 0.2, 0, 0.18, 1);
           for (let j = 0; j < 10; j++) {
             const life = 0.2 + R(sd, j, 1) * 0.12; if (ts > life) continue;
             randUnit(Vel, sd, j, 2).multiplyScalar(2 + R(sd, j, 3) * 2.5); drag(Pt, c.spawnAt, Vel, 6, 0, ts);
@@ -937,8 +938,8 @@ export function create(ctx) {
         const lu = clamp((ts + 0.02) / 0.06), tu = clamp((ts - 0.04) / 0.12);
         if (tu < 1 && c.spawnFrom.distanceTo(c.spawnAt) > 0.2) {
           Pt.lerpVectors(c.spawnFrom, c.spawnAt, tu); Pt2.lerpVectors(c.spawnFrom, c.spawnAt, lu);
-          line(B, Pt, Pt2, 0.03, WHT, 2.5, 1 - tu, 0.5, 0.6);
-          line(B, Pt, Pt2, 0.09, c.i % 2 ? CYA : VIO, 1.5, (1 - tu) * 0.6, 0.5, 0.6);
+          line(B, Pt, Pt2, 0.02, WHT, 1.8, 1 - tu, 0.5, 0.6);
+          line(B, Pt, Pt2, 0.06, c.i % 2 ? CYA : VIO, 1.2, (1 - tu) * 0.5, 0.5, 0.6);
         }
       }
       // fist charge 8.0–8.4 (staggered)
@@ -1048,10 +1049,12 @@ export function create(ctx) {
     if (t < 8.8 || t > 9.38 || spaceAt(t) !== 'inside') return;
     const fade = 1 - sm((t - 9.18) / 0.2), n = 18;
     const pts = trailPts.slice(0, n);
-    for (let k = 0; k < n; k++) bonePoint(THREE, posed(defs.victim, Math.max(8.79, t - (n - 1 - k) * 0.013)), 'chest', pts[k]);
+    // the trail runs from the pelvis' past positions and stops short of the body (the head lags 2 samples behind)
+    for (let k = 0; k < n; k++) bonePoint(THREE, posed(defs.victim, Math.max(8.79, t - (n + 1 - k) * 0.013)), 'pelvis', pts[k]);
     if (pts[0].distanceTo(pts[n - 1]) < 0.15) return;
-    RB.ribbon(pts, cam, s => 0.28 * Math.pow(s, 0.8), s => { const c = mixc(VIO, WHT, s * s); return [c[0] * 2.5, c[1] * 2.5, c[2] * 2.5, fade * s]; });
-    RB.ribbon(pts, cam, s => 0.6 * Math.pow(s, 0.6), s => [MAG[0] * 1.2, MAG[1] * 1.2, MAG[2] * 1.2, fade * s * 0.45]);
+    const tw = s => Math.pow(Math.sin(Math.PI * Math.min(1, s * 1.15)), 0.7);
+    RB.ribbon(pts, cam, s => 0.13 * tw(s), s => { const c = mixc(VIO, WHT, s * s); return [c[0] * 1.8, c[1] * 1.8, c[2] * 1.8, fade * s]; });
+    RB.ribbon(pts, cam, s => 0.32 * tw(s), s => [MAG[0] * 0.9, MAG[1] * 0.9, MAG[2] * 0.9, fade * s * 0.4]);
     const C = f.bone('victim', 'chest');
     Dv.subVectors(pts[n - 1], pts[n - 4]).normalize();
     for (let j = 0; j < 12; j++) {
@@ -1141,15 +1144,15 @@ export function create(ctx) {
     if (tau < 0.35) {
       const u = tau / 0.35;
       Pt.set(C.x, 0.5, C.z);
-      spr(B, Pt, 2.0 * (1 + u), 0, WHT, 1.3, (1 - u) ** 2, 0, 0.4, 2.2);
-      spr(B, Pt, 3.6, 0, MAG, 0.9, (1 - u) ** 2 * 0.45, 0, 0, 2.6);
+      spr(B, Pt, 1.4 * (1 + u), 0, WHT, 1.0, (1 - u) ** 2.5, 0, 0.3, 2.4);
+      spr(B, Pt, 2.6, 0, MAG, 0.7, (1 - u) ** 2.5 * 0.4, 0, 0, 2.8);
       Pt2.set(C.x, 9, C.z);
-      if (tau < 0.22) { const v = tau / 0.22; line(B, Pt, Pt2, 0.45 * (1 - v), WHT, 2, 1 - v, 0, 0); line(B, Pt, Pt2, 1.1 * (1 - v * 0.5), VIO, 1.3, (1 - v) * 0.5, 0, 0); }
-      spr(B, Pt, 2.2 + u * 2, 7, WHT, 2.2, (1 - u) ** 2, 0.2, 40);
+      if (tau < 0.18) { const v = tau / 0.18; line(B, Pt, Pt2, 0.28 * (1 - v), WHT, 1.6, 1 - v, 0, 0); line(B, Pt, Pt2, 0.7 * (1 - v * 0.5), VIO, 1.1, (1 - v) * 0.45, 0, 0); }
+      spr(B, Pt, 1.6 + u * 1.5, 7, WHT, 1.6, (1 - u) ** 2.5, 0.2, 40);
     }
     offerLight(Pt.set(C.x, 0.6, C.z), 70 * Math.exp(-tau * 7) + 1.5 * Math.exp(-tau * 0.8), VIO);
     // ground shockwaves
-    for (let rj = 0; rj < 3; rj++) {
+    for (let rj = 0; rj < 2; rj++) {
       const tt = tau - rj * 0.06, life = 0.6 + rj * 0.15; if (tt < 0 || tt > life) continue;
       const u = tt / life, rad = (11 - rj * 3) * (1 - Math.exp(-tt * (5 - rj)));
       Pt.set(C.x, 0.03 + rj * 0.006, C.z);
@@ -1211,7 +1214,7 @@ export function create(ctx) {
       const u = tau / life; if (u > 1) continue;
       const sc = size0 * sm(tau / (col ? 0.18 : 0.07)) * (1 + 0.5 * u) * (1 - sm((u - 0.35) / 0.65));
       const shade = 0.8 + R(15, j, 7) * 0.2;
-      SM.put(p, null, sc, col ? [0.3 * shade, 0.28 * shade, 0.29 * shade] : [0.52 * shade, 0.44 * shade, 0.34 * shade], col ? 1 : 0.62);
+      SM.put(p, null, sc, col ? [0.3 * shade, 0.28 * shade, 0.29 * shade] : [0.44 * shade, 0.37 * shade, 0.28 * shade], col ? 1 : 0.85);
     }
     // smoke still curling out of the crater
     for (let j = 0; j < 9; j++) {
@@ -1240,12 +1243,12 @@ export function create(ctx) {
       groundQuad(Pt, (3.2 - rj) * (1 - Math.exp(-tt * 7)), 0, rj ? VIO : WHT, 1.6, (1 - u) ** 1.6, 0.2 * (1 - u) + 0.05, 1);
     }
     offerLight(Pt.set(C.x, 0.4, C.z), 12 * Math.exp(-tau * 8), VIO);
-    for (let j = 0; j < 16; j++) {
-      const a = j / 16 * TAU + R(17, j) * 0.3, v0 = 4 + R(17, j, 1) * 3, kd = 3.6;
-      const rr = 0.35 + v0 * (1 - Math.exp(-kd * tau)) / kd, life = 0.8 + R(17, j, 2) * 0.5, u = tau / life;
+    for (let j = 0; j < 22; j++) {
+      const a = j / 22 * TAU + R(17, j) * 0.25, v0 = 3 + R(17, j, 1) * 2, kd = 4.5;
+      const rr = 0.3 + v0 * (1 - Math.exp(-kd * tau)) / kd, life = 0.55 + R(17, j, 2) * 0.35, u = tau / life;
       if (u > 1) continue;
-      Pt.set(C.x + Math.cos(a) * rr, 0.08 + R(17, j, 3) * 0.12 + 0.25 * (1 - Math.exp(-tau)) * R(17, j, 4), C.z + Math.sin(a) * rr);
-      SM.put(Pt, null, (0.08 + R(17, j, 5) * 0.09) * sm(tau / 0.06) * (1 + 0.5 * u) * (1 - sm((u - 0.35) / 0.65)), [0.52, 0.44, 0.34], 0.6);
+      Pt.set(C.x + Math.cos(a) * rr, 0.06 + R(17, j, 3) * 0.08 + 0.18 * (1 - Math.exp(-2 * tau)) * R(17, j, 4), C.z + Math.sin(a) * rr);
+      SM.put(Pt, null, (0.1 + R(17, j, 5) * 0.08) * sm(tau / 0.05) * (1 + 0.6 * u) * (1 - sm((u - 0.3) / 0.7)), [0.44, 0.37, 0.28], 0.8);
     }
     for (let j = 0; j < 10; j++) {
       const size = 0.06 + R(18, j) * 0.08, a = R(18, j, 1) * TAU, vy = 3 + R(18, j, 2) * 3, vh = 1 + R(18, j, 3) * 2.2;
@@ -1305,6 +1308,7 @@ export function create(ctx) {
   // ------------------------------------------------------------------------------------------ update
   return {
     update(t, f) {
+      t += 2e-4; // frame times like 264/60 can land a hair before an event time
       for (const p of [B, BN, Q, RB, SM, BK, DK]) p.reset();
       // impact frames: only the actors (layer 1) as flat white silhouettes + the star, on black; post does mono/invert/lines
       const imp = f.space === 'inside' ? impactFrame(t) : null;
@@ -1367,6 +1371,7 @@ const shakeNoise = (x, seed) => {
 };
 export function post(t, p, f) {
   if (!S) return p;
+  t += 2e-4;
   const { THREE } = S;
   const cam = f.camera;
   cam.updateMatrixWorld();

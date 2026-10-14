@@ -15,7 +15,12 @@
 //   'head'       relative to the torso: pitch + = nod down, yaw + = look left, roll + = tilt left
 //   'armR' 'armL' [pitch, yaw, roll]: pitch + = swing forward/up (90 = straight ahead, 180 = up), yaw + = across the body
 //                (inward), roll + = raise sideways away from the body (90 = T-pose)
-//   'legR' 'legL' relative to the torso (hips): pitch + = kick forward, yaw + = toe inward, roll + = spread outward
+//   'legR' 'legL' relative to the torso (hips): pitch + = kick forward, yaw + = toe inward, roll + = spread outward.
+//                With actor.legSpace = 'root' the legs are NOT children of the torso: angles and '.pos' offsets are in
+//                the root frame (independent of the torso lean), rest hip socket = (±1.9, 12) px above the feet.
+//   R6 style: limbs are free blocks. In the pack, legs and arms are translated out of their sockets almost all the time
+//   (median ~3 px, peaks 6–10 px): a "bent knee" is a leg moved up/forward and tilted, a punch is an arm thrust out of
+//   the shoulder. Use '<limb>.pos' constantly.
 //   '<part>.pos' [x,y,z] pixel offset in the parent frame (x right, y up, z FORWARD); e.g. 'armR.pos' [0,0,3] = reach
 //   'vis'        0/1 visibility (use 'step' for blinks)
 //   'ghost'      0..1 spectral look amount (clones/afterimages), additive glow tint actor.ghostColor
@@ -89,6 +94,7 @@ export function poseAt(actor, t) {
     plant: sample(tr.plant, t) ?? 0,
     vis: sample(tr.vis, t) ?? 1,
     ghost: sample(tr.ghost, t) ?? (actor.ghostColor ? 1 : 0),
+    legSpace: actor.legSpace || 'torso',
   };
   for (const n of PARTS) {
     p[n] = sample(tr[n], t) || [0, 0, 0];
@@ -164,7 +170,15 @@ function partEuler(name, [p, y, r]) {
 }
 
 /** Apply a pose (from poseAt) to a player built by makePlayer. */
+const BODY_HIP = { legR: [1.9, 12, 0], legL: [-1.9, 12, 0] }; // hip sockets in the body (root) frame, px above the feet
 export function applyPose(pl, pose) {
+  // legSpace 'root': the legs hang from the body frame instead of the torso, so they move independently of the
+  // RootJoint (torso lean/twist/offset); 'legR'/'legL' angles and '.pos' offsets are then in the root frame.
+  const space = pose.legSpace || 'torso';
+  if (pl.legSpace !== space) {
+    for (const n of ['legR', 'legL']) (space === 'root' ? pl.body : pl.parts.torso).add(pl.parts[n]);
+    pl.legSpace = space;
+  }
   pl.root.visible = pose.vis > 0.5;
   pl.root.position.set(pose.pos[0], pose.pos[1], pose.pos[2]);
   const [rp, ry, rr] = pose.rot;
@@ -177,7 +191,8 @@ export function applyPose(pl, pose) {
     g.rotation.set(e[0], e[1], e[2], 'ZYX');
     const o = pose[name + '.pos'];
     // offsets: x right, y up, z forward (forward = -Z in model space)
-    g.position.set(pl.rest[name].x + o[0] * PX, pl.rest[name].y + o[1] * PX, pl.rest[name].z - o[2] * PX);
+    const r = space === 'root' && BODY_HIP[name] ? { x: BODY_HIP[name][0] * PX, y: BODY_HIP[name][1] * PX, z: 0 } : pl.rest[name];
+    g.position.set(r.x + o[0] * PX, r.y + o[1] * PX, r.z - o[2] * PX);
   }
   if (pose.plant > 0) {
     // feet on the ground: shift the body so the lowest leg-box corner is at root.pos y (pure function of the pose)
