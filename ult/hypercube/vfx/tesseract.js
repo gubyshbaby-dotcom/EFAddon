@@ -660,10 +660,10 @@ export function create(ctx) {
       void main(){
         vec4 c = texture2D(uTex, vUv);
         float on = step(c.g, uProg) * step(0.01, c.r);
-        float front = on * (1.0 - smoothstep(0.0, 0.18, uProg - c.g));
+        float front = on * (1.0 - smoothstep(0.0, 0.07, uProg - c.g));
         float halo = c.b * step(c.a, uProg);
         float fl = 0.85 + 0.15 * sin(uTime * 23.0 + c.g * 40.0);
-        vec3 col = vec3(0.258, 0.107, 1.0) * halo * 0.35 + mix(vec3(0.5, 0.2, 2.0), vec3(2.0, 1.7, 2.6), front) * c.r * on * fl;
+        vec3 col = vec3(0.258, 0.107, 1.0) * halo * 0.12 + mix(vec3(0.42, 0.14, 1.7), vec3(1.6, 1.3, 2.2), front) * c.r * on * fl;
         gl_FragColor = vec4(col * uI, 1.0);
       }`,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
@@ -931,7 +931,7 @@ export function create(ctx) {
         const y = 0.03 + (0.5 + 1.0 * h(3)) * (t - t0) + 0.2 * a * a;
         const sw = 0.06 * Math.sin((t - t0) * (4 + 3 * h(4)) + h(5) * 6);
         const col = h(6) < 0.5 ? COL.violet : (h(6) < 0.8 ? COL.magenta : COL.cyan);
-        Sp.push([x + sw, y, z + sw * 0.6], 0.018 + 0.02 * h(7), 0, col, 2.4 * Math.sin(Math.PI * a) * (1 - smooth(2.3, 2.8, t)), 0);
+        Sp.push([x + sw, y, z + sw * 0.6], 0.011 + 0.013 * h(7), 0, col, 2.2 * Math.sin(Math.PI * a) * (1 - smooth(2.3, 2.8, t)), 0);
       }
     }
     // gather: motes stream into the palm (0.98 → 1.2)

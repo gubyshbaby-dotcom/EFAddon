@@ -91,7 +91,7 @@ void main(){
     float aa = fwidth(r) * 1.2 + 1e-4;
     m = (1.0 - smoothstep(-aa, aa, perp - hw)) * step(0.0, along);
     m = max(m, 1.0 - smoothstep(vP.w * 1.5 - aa, vP.w * 1.5 + aa, r));
-    o = vC.rgb * (1.0 + 1.2 * (1.0 - r));
+    o = vC.rgb * (1.0 + 0.5 * (1.0 - r));
   } else if (s < 2.5) {                // 2 pixel square
     float aa = fwidth(q.x) + 1e-4;
     m = (1.0 - smoothstep(1.0 - aa, 1.0, abs(q.x))) * (1.0 - smoothstep(1.0 - aa, 1.0, abs(q.y)));
@@ -526,9 +526,7 @@ export function create(ctx) {
       if (b.kind === 'blink') b.A = boneAt(def, b.tOff - 1 / 240, 'chest');
       b.seed = Math.round(b.tOn * 240);
     }
-    // the 3.55 blink-in from a cube face: if the animation has no appearance there yet, still mark the event
-    if (!blinks.some(b => b.tOn > 3.42 && b.tOn < 3.75) && visOf(def, 3.55) && spaceAt(3.55) === 'inside')
-      blinks.push({ tOff: 3.55, tOn: 3.55, kind: 'appear', B: boneAt(def, 3.55, 'chest'), seed: 852 });
+    // (the 3.55 blink-in from a cube face comes from the user's vis gap: invisible → visible inside = 'appear')
     for (const b of blinks) if (b.kind === 'appear') {
       // a cube face beside the arrival point, on the screen side away from the victim (camera of that moment)
       const tt = b.tOn;
@@ -649,12 +647,12 @@ export function create(ctx) {
     if (tau < k.life) {
       const u = tau / k.life, grow = 1 + 0.4 * u, rot = R(sd, 1) * TAU, hw = 0.15 * Math.pow(1 - u, 0.8);
       const hot = kind === 'mega' ? 0.7 : 1;
-      spr(B, P, s * 1.25 * grow, 1, c1, 1.35 * hot, 1, rot, k.n, sd, hw * 0.8);
-      spr(B, P, s * (kind === 'mega' ? 0.45 : 0.62) * grow, 1, WHT, 1.3 * hot, 1, rot + Math.PI / k.n, k.n, sd + 3, hw * 1.2);
+      spr(B, P, s * 1.2 * grow, 1, c1, 1.35 * hot, 1 - u * u, rot, k.n, sd, hw * 0.7);
+      spr(B, P, s * (kind === 'mega' ? 0.42 : 0.55) * grow, 1, WHT, 1.05 * hot, 1 - u * u, rot + Math.PI / k.n, k.n, sd + 3, hw * 1.1);
     }
     if (big) {
       const l2 = k.life * 1.15, tt = tau - FR;
-      if (tt >= 0 && tt < l2) { const u = tt / l2; spr(B, P, s * 1.45 * (1 + 0.3 * u), 1, c2, 1.5, 1 - u * u, R(sd, 2) * TAU, 14, sd + 5, 0.035 * (1 - u)); }
+      if (tt >= 0 && tt < l2) { const u = tt / l2; spr(B, P, s * 1.25 * (1 + 0.3 * u), 1, c2, 1.2, 0.8 * (1 - u * u), R(sd, 2) * TAU, 14, sd + 5, 0.035 * (1 - u)); }
     }
     // billboard ring
     const lr = 0.1 + k.s * 0.12;
@@ -1175,10 +1173,10 @@ export function create(ctx) {
     }
     // flying debris blocks
     for (let j = 0; j < 46; j++) {
-      const size = 0.08 + Math.pow(R(13, j), 2) * 0.22;
+      const size = 0.08 + Math.pow(R(13, j), 2) * 0.17;
       const a = R(13, j, 1) * TAU, vy = 5 + R(13, j, 2) * 7.5;
       const tL = 2 * vy / 24;
-      const vh = Math.min(Math.max(1 + R(13, j, 3) * 6.5, 2.1 / tL), 4.2 / tL);
+      const vh = Math.min(Math.max(1 + R(13, j, 3) * 6.5, 2.1 / tL), 3.3 / tL);
       Vel.set(Math.cos(a) * vh, vy, Math.sin(a) * vh);
       tmp.set(C.x + Math.cos(a) * 0.4, 0.3, C.z + Math.sin(a) * 0.4);
       debrisBlock(j % 3 === 0 ? DK : BK, 13, j, tmp, Vel, size, tau, j % 3 === 0 ? [0.8, 0.8, 0.8] : [1, 1, 1]);
@@ -1207,8 +1205,8 @@ export function create(ctx) {
         p = Pt.set(C.x + Math.cos(a) * rr, 0.08, C.z + Math.sin(a) * rr);
         life = 0.7 + R(15, j, 5) * 0.3; size0 = 0.15 + R(15, j, 6) * 0.12;
       } else {
-        const a = R(15, j) * TAU, rr = 0.15 + R(15, j, 1) * 0.5, vy = 2.5 + R(15, j, 2) * 3;
-        p = Pt.set(C.x + Math.cos(a) * rr + tau * 0.25, 0.3 + vy * (1 - Math.exp(-1.1 * tau)) / 1.1, C.z + Math.sin(a) * rr + tau * 0.08);
+        const a = R(15, j) * TAU, rr = 0.15 + R(15, j, 1) * 0.5, vy = 0.9 + R(15, j, 2) * 0.9;
+        p = Pt.set(C.x + Math.cos(a) * rr + tau * 0.25, 0.3 + vy * (1 - Math.exp(-1.2 * tau)) / 1.2, C.z + Math.sin(a) * rr + tau * 0.08);
         life = 1.3 + R(15, j, 5) * 0.6; size0 = 0.18 + R(15, j, 6) * 0.2;
       }
       const u = tau / life; if (u > 1) continue;
@@ -1358,8 +1356,8 @@ export function create(ctx) {
 
       for (const p of [B, BN, Q, RB, SM, BK, DK]) p.flush();
       // light sits a little toward the camera from the source so the faces we see get lit; my units × 0.12
-      light.intensity = lightBest.I * 0.05;
-      light.position.copy(lightBest.p).add(tmp.subVectors(cam, lightBest.p).setLength(Math.min(0.25, cam.distanceTo(lightBest.p) * 0.2)));
+      light.intensity = lightBest.I * 0.045;
+      light.position.copy(lightBest.p).add(tmp.subVectors(cam, lightBest.p).setLength(Math.min(0.6, cam.distanceTo(lightBest.p) * 0.4)));
       light.color.setRGB(lightBest.col[0] * 0.6 + 0.4, lightBest.col[1] * 0.6 + 0.4, lightBest.col[2] * 0.6 + 0.4);
     },
   };
@@ -1418,7 +1416,7 @@ export function post(t, p, f) {
   }
   if (t >= 8.6 && t < 9.4) {
     const tau = t - 8.6, fi = Math.floor(tau * 60 + 0.02);
-    if (fi === 0) flash = Math.max(flash, 0.5);
+    if (fi === 0) flash = Math.max(flash, 0.35);
     chroma += 0.8 * Math.exp(-tau * 6); bloom += 0.35 * Math.exp(-tau * 6);
     if (vuv) { kick(0.6 * Math.exp(-tau * 7), vuv); rips.push({ c: vuv, r: 1.1 * (1 - Math.exp(-tau * 3.4)), s: 0.045 * Math.max(0, 1 - tau / 0.7) }); }
   }

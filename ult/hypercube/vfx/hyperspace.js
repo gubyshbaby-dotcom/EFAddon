@@ -76,8 +76,8 @@ const LAT = [
   // camera live inside L0's inner cell (half s/2), so no edge cuts between the camera and the fight most of the time.
   { s: 6.8, edgeW: 0.008, flareS: 0.03, edge: 0.4, flare: 0.22, coreI: 0.95, faces: null, spd: [0.55, 0.33, -0.21], spin: 0.06, hue: 0.0, near: 2.6, tilt: 0.3 },
   { s: 15, edgeW: 0.0065, flareS: 0.026, edge: 0.34, flare: 0.2, coreI: 0.75, faces: 'lattice', spd: [-0.29, 0.41, 0.17], spin: -0.035, hue: 0.12, near: 3, tilt: -0.5 },
-  { s: 36, edgeW: 0.0055, flareS: 0.024, edge: 0.28, flare: 0.18, coreI: 0.6, faces: null, spd: [0.19, -0.15, 0.31], spin: 0.02, hue: -0.18, near: 3, tilt: 0.9 },
-  { s: 85, edgeW: 0.005, flareS: 0.022, edge: 0.24, flare: 0.16, coreI: 0.5, faces: null, spd: [-0.11, 0.09, -0.07], spin: -0.012, hue: 0.25, near: 4, tilt: -1.1 },
+  { s: 36, edgeW: 0.0055, flareS: 0.024, edge: 0.24, flare: 0.18, coreI: 0.6, faces: null, spd: [0.19, -0.15, 0.31], spin: 0.02, hue: -0.18, near: 3, tilt: 0.9 },
+  { s: 85, edgeW: 0.005, flareS: 0.022, edge: 0.18, flare: 0.16, coreI: 0.5, faces: null, spd: [-0.11, 0.09, -0.07], spin: -0.012, hue: 0.25, near: 4, tilt: -1.1 },
 ];
 
 let H = null; // module state for post()
