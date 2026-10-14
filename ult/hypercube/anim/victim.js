@@ -52,7 +52,7 @@ const keys = [
   K(2.555, { torso: [-9, 5, -6], head: [-6, 0, -4], armL: [120, 38, 22], armR: [126, 42, 18], shake: 0.8 }, 'sineOut'),
   K(2.583, { torso: [-7, 4, -5], head: [-4, 0, -2], armL: [118, 34, 28], armR: [122, 38, 26], lookW: 1, rot: [0, 0], shake: 0.4 }, 'linear'),
   // ---- 2.60 KICK in the belly: folds over the sole (contact frame), held through the hit-stop ----
-  K(2.60, { yaw: 194, footR: ST_R, footL: LB_L, torso: [36, 0, 4], head: [38, 0, 6], armL: [92, 8, 76], armR: [96, 6, 72],
+  K(2.60, { yaw: 194, bias: 25, footR: ST_R, footL: LB_L, torso: [36, 0, 4], head: [38, 0, 6], armL: [92, 8, 76], armR: [96, 6, 72],
     lookW: 0, look: USER_DASH, shake: 0, rot: [0, 0] }, 'expoIn'),
   K(2.65, { yaw: 194, footR: ST_R, footL: LB_L, torso: [36, 0, 4], head: [38, 0, 6], armL: [92, 8, 76], armR: [96, 6, 72],
     lookW: 0, look: USER_DASH, shake: 0, rot: [0, 0] }, 'linear'),
