@@ -30,14 +30,41 @@ const LABEL = opt('--label', '');
 const SKINS = ['steve:0', 'alex:1', 'kai:0', 'zuri:0'];
 const ROLES = ['USER', 'VICTIM', 'C', 'D'];
 
+// --actor <id>[:skin[:slim]]  or a chain  --actor "<id>@<start>[/<fade>],<id>@<start>,...[:skin[:slim]]"
 const actors = all('--actor').map((spec, i) => {
   const [id, skin, slim] = spec.split(':');
+  if (id.includes('@')) {
+    const [dskin, dslim] = SKINS[i].split(':');
+    const sl = (slim ?? dslim) === '1';
+    const chain = id.split(',').map(part => {
+      const [cid, rest] = part.split('@');
+      const [st, fd] = rest.split('/');
+      return { seq: JSON.parse(readFileSync(join(DATA, cid + '.json'), 'utf8')), start: +st, fade: fd !== undefined ? +fd : 0.05 };
+    });
+    return { id: 'chain', chain, skin: `tex/${sl ? 'slim' : 'wide'}_${skin || dskin}.png`, slim: sl, origin: [0, 0, 0], yaw: 0, role: ROLES[i], seq: { name: 'chain' } };
+  }
   const [dskin, dslim] = SKINS[i].split(':');
   const sk = skin || dskin;
   const sl = (slim ?? dslim) === '1';
   return { id, seq: JSON.parse(readFileSync(join(DATA, id + '.json'), 'utf8')), skin: `tex/${sl ? 'slim' : 'wide'}_${sk}.png`, slim: sl, origin: [0, 0, 0], yaw: 0, role: ROLES[i] };
 });
 if (!actors.length) { console.error('no --actor'); process.exit(1); }
+// --base <actorIndex>:<idleId>  stance for clips without leg keys (legs from it, torso bends about the hips)
+for (const spec of all('--base')) {
+  const [i, bid] = spec.split(':');
+  actors[+i].baseSeq = JSON.parse(readFileSync(join(DATA, bid + '.json'), 'utf8'));
+}
+// --knock <actorIndex>:<t>:<distBlocks>:<heightBlocks>:<dur>  knock-back flight of an actor after time t
+for (const spec of all('--knock')) {
+  const [i, t, dist, height, dur] = spec.split(':').map(Number);
+  actors[i].knock = { t, dist, height, dur };
+}
+// --place <actorIndex>:<x>:<z>:<yawDeg>  extra placement of an actor's HumanoidRootPart (blocks; x = user's right, z = user's back)
+for (const spec of all('--place')) {
+  const [i, x, z, yaw] = spec.split(':').map(Number);
+  actors[i].origin = [x, 0, z];
+  actors[i].yaw = (yaw || 0) * Math.PI / 180;
+}
 
 const CAMERAS = {
   side: { az: 90, el: 10, dist: 5.5, fov: 42 },       // from the user's right

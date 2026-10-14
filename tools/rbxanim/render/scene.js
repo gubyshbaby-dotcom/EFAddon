@@ -1,6 +1,6 @@
 // three.js scene: Minecraft player models (vanilla geometry + skin UVs) driven by r6.js poses.
 import * as THREE from 'three';
-import { buildTracks, poseAt, mcPivots } from './r6.js';
+import { buildTracks, poseAt, mcPivots, speedDistance, legFix } from './r6.js';
 
 const W = window.innerWidth, H = window.innerHeight;
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -125,10 +125,62 @@ function applyPose(player, pose, origin, yaw) {
 
 // ---- API for the driver (render.mjs) ----
 const S = { actors: [], cam: null, label: '' };
+// pose of an actor at scene time t: a single clip, or a chain [{tracks, start, fade}] with cross-fades
+function chainPose(a, t) {
+  if (!a.chain) return poseAt(a.tracks.tracks, Math.min(t, a.tracks.length), a.slim, speedDistance(a.tracks, Math.min(t, a.tracks.length)));
+  let i = 0;
+  while (i + 1 < a.chain.length && a.chain[i + 1].start <= t) i++;
+  const cur = a.chain[i];
+  const lt = Math.max(0, Math.min(t - cur.start, cur.tracks.length));
+  const clipPose = (c, tt) => {
+    const p0 = poseAt(c.tracks.tracks, tt, a.slim);
+    if (!a.base || c.tracks.tracks['Right Leg'] || c.tracks.tracks['Left Leg']) return p0;
+    return legFix(p0, poseAt(a.base.tracks, t % a.base.length, a.slim));
+  };
+  const p = clipPose(cur, lt);
+  if (i > 0 && t - cur.start < cur.fade) {
+    const prev = a.chain[i - 1];
+    const q = clipPose(prev, Math.min(t - prev.start, prev.tracks.length));
+    const w = (t - cur.start) / cur.fade, k = w * w * (3 - 2 * w);
+    return blendPose(q, p, k);
+  }
+  return p;
+}
+function lerp3(a, b, k) { return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; }
+function blendRot(A, B, k) {
+  const qa = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().set(A[0], A[1], A[2], 0, A[3], A[4], A[5], 0, A[6], A[7], A[8], 0, 0, 0, 0, 1));
+  const qb = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().set(B[0], B[1], B[2], 0, B[3], B[4], B[5], 0, B[6], B[7], B[8], 0, 0, 0, 0, 1));
+  qa.slerp(qb, k);
+  const e = new THREE.Matrix4().makeRotationFromQuaternion(qa).elements; // column-major
+  return [e[0], e[4], e[8], e[1], e[5], e[9], e[2], e[6], e[10]];
+}
+function blendPose(a, b, k) {
+  const parts = {};
+  for (const n of Object.keys(b.parts)) parts[n] = { pivot: lerp3(a.parts[n].pivot, b.parts[n].pivot, k), rot: blendRot(a.parts[n].rot, b.parts[n].rot, k) };
+  return { torso: { pos: lerp3(a.torso.pos, b.torso.pos, k), rot: blendRot(a.torso.rot, b.torso.rot, k) }, parts };
+}
+// knock-back flight added to an actor's root: along -z of the scene (away from the user), arc of given height
+function knockOffset(a, t) {
+  const k = a.knock;
+  if (!k || t < k.t) return [0, 0, 0];
+  const u = Math.min(1, (t - k.t) / k.dur);
+  const e = 1 - Math.pow(1 - u, 3);
+  return [0, k.height * 4 * u * (1 - u), -k.dist * e];
+}
+
 window.setupScene = async (cfg) => {
   // cfg: {actors: [{seq, skin, slim, origin:[x,y,z], yaw}], label, cam: {mode, ...}}
   for (const a of S.actors) scene.remove(a.player.root);
-  S.actors = cfg.actors.map(a => ({ ...a, tracks: buildTracks(a.seq), player: makePlayer(a.skin, a.slim) }));
+  S.actors = cfg.actors.map(a => {
+    const o = { ...a, player: makePlayer(a.skin, a.slim) };
+    if (a.chain) {
+      o.chain = a.chain.map(c => ({ tracks: buildTracks(c.seq), start: c.start, fade: c.fade ?? 0.05 }));
+      const last = o.chain[o.chain.length - 1];
+      o.tracks = { length: last.start + last.tracks.length, events: o.chain.flatMap(c => c.tracks.events.map(e => ({ ...e, t: e.t + c.start }))) };
+    } else o.tracks = buildTracks(a.seq);
+    if (a.baseSeq) o.base = buildTracks(a.baseSeq);
+    return o;
+  });
   S.cam = cfg.cam;
   S.label = cfg.label || '';
   S.length = Math.max(...S.actors.map(a => a.tracks.length));
@@ -137,9 +189,10 @@ window.setupScene = async (cfg) => {
 };
 
 function worldTorso(a, t) {
-  const p = poseAt(a.tracks.tracks, Math.min(t, a.tracks.length), a.slim).torso.pos;
+  const p = chainPose(a, t).torso.pos;
+  const ko = knockOffset(a, t);
   const c = Math.cos(a.yaw || 0), s = Math.sin(a.yaw || 0);
-  return [a.origin[0] + c * p[0] + s * p[2], a.origin[1] + p[1], a.origin[2] - s * p[0] + c * p[2]];
+  return [a.origin[0] + c * p[0] + s * p[2] + ko[0], a.origin[1] + p[1] + ko[1], a.origin[2] - s * p[0] + c * p[2] + ko[2]];
 }
 function centroid(t) {
   let x = 0, y = 0, z = 0;
@@ -187,7 +240,7 @@ window.renderAtCams = (t, cams) => {
   return true;
 };
 window.renderAt = (t) => {
-  for (const a of S.actors) applyPose(a.player, poseAt(a.tracks.tracks, Math.min(t, a.tracks.length), a.slim), a.origin, a.yaw || 0);
+  for (const a of S.actors) { const ko = knockOffset(a, t); applyPose(a.player, chainPose(a, t), [a.origin[0] + ko[0], a.origin[1] + ko[1], a.origin[2] + ko[2]], a.yaw || 0); }
   const c = S.cam || {};
   const tgt = c.follow === false ? (c.target || [0, 1, -1.5]) : smoothCentroid(t, c.smooth ?? 0.35);
   const az = (c.az ?? 90) * Math.PI / 180, el = (c.el ?? 12) * Math.PI / 180;

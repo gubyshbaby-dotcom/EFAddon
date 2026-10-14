@@ -109,7 +109,27 @@ export function buildTracks(seq) {
     if (kf.name && kf.name !== 'Keyframe') events.push({ t: kf.t, name: kf.name });
     for (const m of kf.markers || []) events.push({ t: kf.t, name: m.name, value: m.value });
   }
-  return { tracks, events, length: seq.length, name: seq.name };
+  // "_SPEED" markers (value = forward root speed in studs/s from this key on): integrate to a root offset
+  const speeds = events.filter(e => e.name === '_SPEED').map(e => ({ t: e.t, v: parseFloat(e.value) || 0 })).sort((a, b) => a.t - b.t);
+  let speedPath = null;
+  if (speeds.length) {
+    speedPath = [{ t: speeds[0].t, d: 0 }];
+    for (let i = 1; i < speeds.length; i++) speedPath.push({ t: speeds[i].t, d: speedPath[i - 1].d + speeds[i - 1].v * (speeds[i].t - speeds[i - 1].t) });
+    speedPath.lastV = speeds[speeds.length - 1].v;
+  }
+  return { tracks, events: events.filter(e => e.name !== '_SPEED'), length: seq.length, name: seq.name, speedPath };
+}
+
+/** Forward root distance (studs) from "_SPEED" markers at time t, or 0. */
+export function speedDistance(bt, t) {
+  const sp = bt.speedPath;
+  if (!sp) return 0;
+  if (t <= sp[0].t) return 0;
+  let i = sp.length - 1;
+  while (i > 0 && sp[i].t > t) i--;
+  const next = sp[i + 1];
+  const v = next ? (next.d - sp[i].d) / Math.max(1e-6, next.t - sp[i].t) : sp.lastV;
+  return sp[i].d + v * (t - sp[i].t);
 }
 
 export function sampleTrack(keys, t) {
@@ -142,12 +162,12 @@ export function mcPivots(slim) {
  * Pose at time t: { torso: {pos, rot}, parts: {Head|Right Arm|...: {pivot, rot}} } in HRP space (blocks, feet at y 0).
  * rot = row-major 3x3 world rotation of the part; pivot = world position of the part's MC pivot.
  */
-export function poseAt(tracks, t, slim = false) {
+export function poseAt(tracks, t, slim = false, forwardStuds = 0) {
   const tor = sampleTrack(tracks.Torso, t) || { p: [0, 0, 0], q: [0, 0, 0, 1] };
   const RT = matFromQuat(tor.q);
   const torsoRot = mul(mul(R_ROOT, RT), tr(R_ROOT));
   const off = mv(R_ROOT, tor.p);
-  const torsoPos = [off[0] * STUD, TC_REST_Y + off[1] * STUD, off[2] * STUD];
+  const torsoPos = [off[0] * STUD, TC_REST_Y + off[1] * STUD, (off[2] - forwardStuds) * STUD];
   const piv = mcPivots(slim);
   const parts = {};
   for (const name of ['Head', 'Right Arm', 'Left Arm', 'Right Leg', 'Left Leg']) {
@@ -167,4 +187,31 @@ export function partPoint(pose, name, local) {
   const P = name === 'Torso' ? { pivot: pose.torso.pos, rot: pose.torso.rot } : pose.parts[name];
   const w = mv(P.rot, local);
   return [P.pivot[0] + w[0], P.pivot[1] + w[1], P.pivot[2] + w[2]];
+}
+
+/**
+ * Mod-side fix for clips without leg keys (TSB M1s): in R6 the legs hang from the torso, so a leaning torso tilts
+ * the whole body like a plank. Here the legs come from a base stance (idle) and the torso bends about the hips:
+ * the clip's horizontal hip travel is kept, the hips stay at the stance height, head and arms follow the torso.
+ */
+export function legFix(clipPose, basePose) {
+  const HIP = [0, -6 / 16, 0];
+  const hipOf = p => { const w = mv(p.torso.rot, HIP); return [p.torso.pos[0] + w[0], p.torso.pos[1] + w[1], p.torso.pos[2] + w[2]]; };
+  const hc = hipOf(clipPose), hb = hipOf(basePose);
+  const restHip = [0, TC_REST_Y - 6 / 16, 0];
+  const d = [hc[0] - restHip[0], 0, hc[2] - restHip[2]];
+  const newHip = [hb[0] + d[0], hb[1], hb[2] + d[2]];
+  const up = mv(clipPose.torso.rot, [0, 6 / 16, 0]);
+  const torsoPos = [newHip[0] + up[0], newHip[1] + up[1], newHip[2] + up[2]];
+  const sh = [torsoPos[0] - clipPose.torso.pos[0], torsoPos[1] - clipPose.torso.pos[1], torsoPos[2] - clipPose.torso.pos[2]];
+  const parts = {};
+  for (const n of ['Head', 'Right Arm', 'Left Arm']) {
+    const p = clipPose.parts[n];
+    parts[n] = { pivot: [p.pivot[0] + sh[0], p.pivot[1] + sh[1], p.pivot[2] + sh[2]], rot: p.rot };
+  }
+  for (const n of ['Right Leg', 'Left Leg']) {
+    const p = basePose.parts[n];
+    parts[n] = { pivot: [p.pivot[0] + d[0], p.pivot[1], p.pivot[2] + d[2]], rot: p.rot };
+  }
+  return { torso: { pos: torsoPos, rot: clipPose.torso.rot }, parts };
 }
