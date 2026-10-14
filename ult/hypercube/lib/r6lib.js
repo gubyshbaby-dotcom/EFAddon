@@ -1,3 +1,5 @@
+// STUDY TOOL ONLY — the ult is animated by hand; pack clips are not used in it (the author's call). Use this to measure
+// how the pack's good clips pose and time things (angles, wind-up/contact/recovery lengths, leg work).
 // Pack clips → ult tracks. The ult rig (rig.js) has the exact R6 geometry of the pack renderer (lib/r6.js, copied from
 // tools/rbxanim/render/r6.js), so a pack clip sampled here looks exactly like in the pack renders.
 //
