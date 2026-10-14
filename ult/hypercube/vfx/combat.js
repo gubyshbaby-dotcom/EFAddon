@@ -1156,7 +1156,7 @@ export function create(ctx) {
       const tt = tau - rj * 0.06, life = 0.6 + rj * 0.15; if (tt < 0 || tt > life) continue;
       const u = tt / life, rad = (11 - rj * 3) * (1 - Math.exp(-tt * (5 - rj)));
       Pt.set(C.x, 0.03 + rj * 0.006, C.z);
-      groundQuad(Pt, rad, 0, rj === 1 ? VIO : WHT, rj === 1 ? 2.2 : 1.6, (1 - u) ** 1.6, 0.18 * (1 - u) + 0.04, 1);
+      groundQuad(Pt, rad, 0, rj === 1 ? VIO : WHT, rj === 1 ? 2.0 : 1.5, (1 - u) ** 1.6, Math.min(0.9, (0.7 * (1 - u) + 0.15) / Math.max(rad, 0.3)), 1);
     }
     // block rim: grass blocks heaved up and tilted outward
     for (let j = 0; j < 26; j++) {
@@ -1240,7 +1240,8 @@ export function create(ctx) {
     for (let rj = 0; rj < 2; rj++) {
       const tt = tau - rj * 0.05, life = 0.4; if (tt < 0 || tt > life) continue;
       const u = tt / life; Pt.set(C.x, 0.028 + rj * 0.005, C.z);
-      groundQuad(Pt, (3.2 - rj) * (1 - Math.exp(-tt * 7)), 0, rj ? VIO : WHT, 1.6, (1 - u) ** 1.6, 0.2 * (1 - u) + 0.05, 1);
+      const lr = (3.2 - rj) * (1 - Math.exp(-tt * 7));
+      groundQuad(Pt, lr, 0, rj ? VIO : WHT, 1.5, (1 - u) ** 1.6, Math.min(0.9, (0.35 * (1 - u) + 0.08) / Math.max(lr, 0.2)), 1);
     }
     offerLight(Pt.set(C.x, 0.4, C.z), 12 * Math.exp(-tau * 8), VIO);
     for (let j = 0; j < 22; j++) {
@@ -1284,8 +1285,8 @@ export function create(ctx) {
     const head = pl.parts.head; head.updateWorldMatrix(true, false);
     for (const sx of [1.5, -1.5]) {
       Pt.set(sx / 16, 3.5 / 16, -4.7 / 16).applyMatrix4(head.matrixWorld);
-      spr(B, Pt, 0.07, 0, VIO, 2.2, 0.55 * g * fl, 0, 0.4, 2);
-      spr(B, Pt, 0.022, 0, WHT, 2.5, 0.8 * g * fl, 0, 0.6, 1.2);
+      spr(B, Pt, 0.065, 0, VIO, 2, 0.42 * g * fl, 0, 0.3, 2);
+      spr(B, Pt, 0.02, 0, WHT, 2, 0.6 * g * fl, 0, 0.4, 1.2);
       Pt2.set((sx + Math.sign(sx) * 2.6) / 16, 3.75 / 16, -4.7 / 16).applyMatrix4(head.matrixWorld);
       line(B, Pt2, Pt, 0.006, MAG, 2.2, 0.45 * g * fl, 1.4, 0.8);
     }

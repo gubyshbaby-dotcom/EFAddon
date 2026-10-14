@@ -750,6 +750,7 @@ export function create(ctx) {
   const _q = new THREE.Quaternion(), _m = new THREE.Matrix4(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
 
   S = { ctx, CUBE, EXIT, tc, pc, cubeScreen: [0.5, 0.5] };
+  if (DBG.includes('log')) console.log('[vfxA] swallow t=' + tc.toFixed(3) + ' at ' + pc.toArray().map(v => v.toFixed(2)) + '  exit ' + EXIT.toArray().map(v => v.toFixed(2)) + '  release ' + REL.toArray().map(v => v.toFixed(2)));
 
   // ------------------------------------------------------------------------------------------------ per-frame plan
   function seedState(t, f) {
