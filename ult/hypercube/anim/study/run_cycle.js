@@ -1,19 +1,22 @@
 // STUDY: our own combat run cycle (R6 style on the Minecraft rig). Not used by the ult.
 // "Hunter sprint" v2: a low, bounding battle sprint. Big lean, head up and locked on the target, every step a hop
 // that ends in a stamp; the arms throw hooks. Cycle 0.52 s (two steps), 8 blocks/s, a seamless loop.
+// ARMS (v2): the same idea, block = FOREARM (fist end at the fist), elbow 60–108° through the swing.
 //
 // LEGS (v2, after "the legs are sticks"): every leg is a virtual thigh (6 px) + knee + shin (6 px), lib/vlimb.js.
 // The 12-px block shows the SHIN: its bottom is the sole, it lies along the shin, so its top floats past the virtual
 // knee — that floating top IS the knee: in front of the belly on the knee drive, behind and up on the heel kick,
 // forward of the hip on the bent stance leg, at the hip socket only when the leg is straight.
-//   swing (FK): push-off → heel kick (knee 140°) → the folded leg passes under the body → high knee (thigh +74°,
-//     shin hanging = block standing in front of the belly) → the shin swings out and paws down to the ground;
+//   swing (FK): push-off → heel kick (thigh −56°, shin flung up behind: the block lies behind the butt like the pack's
+//     trailing leg, its top = the knee under the hip) → folded pass (knee 94–106°) → high knee (thigh +74°, shin
+//     hanging = the block stands in front of the belly) → the shin swings out and paws down onto the ground.
+//     (A deeper knee, 110–140°, with the thigh back turns the shin-block vertical under the hip — a stilt again.)
 //   stance (IK): the sole is pinned (heel, then toe: it rolls, never skates); the knee lands at 16°, absorbs to 58°
 //     at mid-stance (the body sinks), extends to 14° for the push. Body height comes out of that.
 // Legs are in the ROOT frame (legSpace 'root'); the hip sockets are recomputed from the torso every key.
 // Everything is a function of the cycle phase; the keys of 4.2 s of running are generated below (120 keys/s).
 import { PX, torsoRot, partM, partAngles, mul, tr, rx, ry, rz, loopCurve, openCurve, hermite, BODY_HIP, legLow, soleEdges } from './run_kit.js';
-import { vleg, vlegIK, hipSocket } from '../../lib/vlimb.js';
+import { vleg, vlegIK, hipSocket, varm } from '../../lib/vlimb.js';
 
 // ---- design ----
 const T = 0.52;         // cycle (two steps), s
@@ -47,33 +50,36 @@ const headAt = (phi, torso) => {
   return partAngles('head', mul(tr(torso.m), world));
 };
 
-// arms: [pitch, yaw, roll] keyed in the WORLD frame (so the silhouette is what I key, whatever the torso does),
-// [x, y, z] = out of the shoulder socket, torso frame. Phase 0 = the same-side foot lands: this arm is thrown back
-// and down past the hip; half a cycle later it has been driven forward and in like a hook. A loop, not a pendulum:
-// forward low and close (fast through the bottom, pulled up out of the socket = a bent elbow), back high and WIDE.
+// arms (v2): virtual upper arm (4 px) + elbow + forearm (6 px), lib/vlimb.js varm: the block shows the FOREARM, its fist
+// end at the fist, its top floating where the elbow is. Keys: [upper-arm pitch, yaw, roll] in the WORLD frame (the
+// silhouette is what I key, whatever the torso does), elbow flexion, shoulder thrust [x, y, z] px (torso frame).
+// Phase 0 = the same-side foot lands. A loop, not a pendulum: the arm drives forward folded and close, the elbow
+// snaps open at the front like a hook-punch and closes again, then the arm is ripped back round the OUTSIDE (wide
+// flare) and the elbow flicks open once more at the back.
 const ARM = loopCurve([
-  [0.03, [-50, -4, 22, 0.6, 0.4, -1.6]],     // thrown back and down past the hip
-  [0.11, [-44, -2, 20, 0.5, 0.6, -1.4]],
-  [0.19, [-20, 6, 18, 0.2, 2.6, -0.4]],
-  [0.24, [16, 14, 16, 0, 3.8, 1.2]],         // through the bottom: one snap, close, pulled up
-  [0.31, [62, 26, 14, -0.2, 2.8, 2.0]],
-  [0.43, [94, 32, 22, -0.4, 1.8, 2.4]],      // driven forward and in like a hook, out of the shoulder
-  [0.55, [88, 26, 40, -0.3, 1.6, 1.6]],      // ...recoils and opens out
-  [0.66, [40, 8, 70, 0.3, 1.6, 0.6]],        // ripped back round the OUTSIDE, wide
-  [0.76, [-20, -6, 80, 0.6, 1.4, -0.4]],
-  [0.88, [-46, -6, 46, 0.6, 0.6, -1.2]],
+  [0.03, [-70, -4, 40, 80, 0.4, 0, -1.2]],   // back extreme: elbow flicks open a little, flared out
+  [0.10, [-64, -2, 34, 98, 0.3, 0, -1.0]],
+  [0.19, [-30, 6, 18, 104, 0, 0, -0.2]],      // drive starts, folded tight
+  [0.26, [15, 14, 12, 108, 0, 0.3, 0.6]],     // through the bottom: fist by the hip, elbow 108°
+  [0.34, [62, 26, 14, 100, -0.2, 0.5, 1.6]],
+  [0.43, [96, 32, 22, 62, -0.4, 0.6, 2.2]],   // hook-punch: the elbow snaps open, fist thrust forward and in
+  [0.50, [96, 28, 28, 76, -0.3, 0.5, 1.8]],
+  [0.57, [82, 22, 44, 100, 0, 0.3, 0.8]],     // recoil: closes and opens out
+  [0.66, [38, 8, 72, 106, 0.3, 0.3, 0.2]],    // ripped back round the outside, wide
+  [0.76, [-20, -6, 78, 98, 0.4, 0.2, -0.4]],
+  [0.88, [-58, -6, 54, 100, 0.4, 0, -1.0]],
 ]);
 
 // legs, leg phase psi: 0 = touchdown, S = toe-off. Swing keys: virtual thigh pitch (root frame) and knee flexion.
 const SIDE = { legR: 'R', legL: 'L' };
 const LEGS = { legR: 0, legL: 0.5 };
 const TD_THIGH = 28, TD_KNEE = 16;                       // the touchdown pose (shin 12° forward: the heel lands first)
-const STANCE_KNEE = loopCurve([[0, TD_KNEE], [0.45, 58], [1, 14], [1.5, 30]]);   // over the stance 0..1 (looped tail unused)
-const SWING_THIGH = [[0.27, -36], [0.36, -30], [0.45, -18], [0.55, 12], [0.65, 50], [0.74, 74], [0.84, 66], [0.93, 44]];
-const SWING_KNEE = [[0.27, 60], [0.36, 120], [0.45, 140], [0.55, 136], [0.65, 118], [0.74, 88], [0.84, 56], [0.93, 26]];
-const SWING_ROLL = loopCurve([[0.0, 0], [0.3, 2], [0.45, 8], [0.6, 10], [0.74, 6], [0.9, 2]]);
+const STANCE_KNEE = openCurve([[0, TD_KNEE], [0.45, 58], [1, 14]], 160, -60);   // over the stance 0..1: land, absorb, push
+const SWING_THIGH = [[0.28, -46], [0.36, -56], [0.44, -54], [0.51, -40], [0.58, -10], [0.64, 24], [0.70, 54], [0.77, 74], [0.86, 64], [0.94, 42]];
+const SWING_KNEE = [[0.28, 48], [0.36, 62], [0.44, 66], [0.51, 76], [0.58, 94], [0.64, 106], [0.70, 102], [0.77, 86], [0.86, 55], [0.94, 26]];
+const SWING_ROLL = loopCurve([[0.0, 0], [0.3, 3], [0.42, 8], [0.6, 10], [0.72, 6], [0.9, 2]]);
 const KNEE_DIR = [0, 0, 1];                              // knees point straight ahead
-const kneeStance = u => STANCE_KNEE(Math.min(0.999, u));
+const kneeStance = u => STANCE_KNEE(u);
 
 const posToSocket = (leg, pos) => [BODY_HIP[leg][0] + pos[0], BODY_HIP[leg][1] + pos[1], -pos[2]];   // track → three-axes px
 const lowOf = (leg, res) => legLow(leg, posToSocket(leg, res.pos), res.ang);
@@ -146,7 +152,22 @@ function rootY(phi) {
 
 // ---- generate the tracks ----
 const tracks = { plant: [[0, 0]], 'root.rot': [[0, [0, 0, 0]]] };
-const put = (name, t, v) => (tracks[name] ||= []).push([+t.toFixed(4), Array.isArray(v) ? v.map(x => +x.toFixed(3)) : +v.toFixed(4), 'linear']);
+// Euler continuity: of the two equivalent 'ZYX' triples (and ±360°), keep the one closest to the previous key, so
+// interpolating between keys never spins a limb
+const SIGNS = { torso: [-1, 1, 1], head: [-1, 1, 1], armR: [1, 1, 1], legR: [1, 1, 1], armL: [1, -1, -1], legL: [1, -1, -1] };
+const near = (v, ref) => v + 360 * Math.round((ref - v) / 360);
+function continuous(name, a, prev) {
+  const sg = SIGNS[name]; if (!sg || !prev) return a;
+  const e = a.map((v, i) => v * sg[i]), alt = [e[0] + 180, 180 - e[1], e[2] + 180].map((v, i) => v * sg[i]);
+  const fit = c => c.map((v, i) => near(v, prev[i]));
+  const A = fit(a), B = fit(alt), dist = c => c.reduce((s, v, i) => s + Math.abs(v - prev[i]), 0);
+  return dist(B) < dist(A) ? B : A;
+}
+const put = (name, t, v) => {
+  const k = (tracks[name] ||= []);
+  if (Array.isArray(v)) v = continuous(name, v, k.length ? k[k.length - 1][1] : null);
+  k.push([+t.toFixed(4), Array.isArray(v) ? v.map(x => +x.toFixed(3)) : +v.toFixed(4), 'linear']);
+};
 const FPS = 120;
 for (let i = 0; i <= END * FPS; i++) {
   const t = i / FPS, phi = wrap(t / T);
@@ -156,9 +177,11 @@ for (let i = 0; i <= END * FPS; i++) {
   put('torso.pos', t, torso.tp);
   put('head', t, headAt(phi, torso));
   for (const [arm, o] of [['armR', 0], ['armL', 0.5]]) {
-    const a = ARM(wrap(phi - o));
-    put(arm, t, partAngles(arm, mul(tr(torso.m), partM(arm, a.slice(0, 3)))));
-    put(arm + '.pos', t, a.slice(3));
+    const a = ARM(wrap(phi - o)), sd = arm === 'armR' ? 1 : -1;
+    const upper = partAngles(arm, mul(tr(torso.m), partM(arm, a.slice(0, 3))));
+    const r = varm(arm === 'armR' ? 'R' : 'L', upper, a[3], { shoulder: [sd * (5 + a[4]), 4 + a[5], a[6]] });
+    put(arm, t, r.ang);
+    put(arm + '.pos', t, r.pos);
   }
   for (const [leg, o] of Object.entries(LEGS)) {
     const r = legPose(leg, wrap(phi - o), phi);
