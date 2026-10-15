@@ -48,11 +48,14 @@ def render_stem(mixer, irs, g0, g1, extra_gate=None):
     return out
 
 
-def duck_curve(n, events, factor=1.0, attack=0.008, lead=0.002):
+def duck_curve(n, events, factor=1.0, attack=0.008, lead_default=0.002):
     """Sidechain gain (linear) from (t, depth_db, release_s, hold_s) events: fast lookahead attack (fully down `lead`
-    before the hit, so the transient rises out of a dip), hold through the hit-stop, exponential release."""
+    before the hit, so the transient rises out of a dip; megas get a longer 30 ms breath), hold through the hit-stop,
+    exponential release. Events: (t, depth_db, release_s, hold_s[, lead_s])."""
     gdb = np.zeros(n)
-    for t, depth, rel, hold in events:
+    for ev in events:
+        t, depth, rel, hold = ev[:4]
+        lead = ev[4] if len(ev) > 4 else lead_default
         if depth <= 0:
             continue
         a = ns(t - attack - lead)

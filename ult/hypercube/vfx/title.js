@@ -1,9 +1,11 @@
 // vfx/title.js — VFX-B: the «ГИПЕРКУБ» title (HUD overlay, DOM). A pure function of t: every style is set on every update.
-// 12.00 glitch-in (RGB split, slice offsets, flicker, scan flash) · subtitle types in · a rotating tesseract glyph ·
-// hold with a slow push and two micro-glitches · 13.45–13.60 glitch-out collapsing to a line (CRT off).
+// glitch-in (RGB split, slice offsets, flicker, scan flash) · subtitle types in · a rotating tesseract glyph ·
+// hold with a slow push and two micro-glitches · glitch-out over the last 0.15 s collapsing to a line (CRT off).
 import { fadeAt } from '../post.js';
+import { EVENTS } from '../timeline.js';
 
-const T_IN = 12.0, T_OUT = 13.45, T_END = 13.6;
+// title event: glitch-in at T_IN, holds 1.6 s (one bar), glitch-out over the last 0.15 s
+const T_IN = EVENTS.find(e => e.id === 'title').t, T_END = T_IN + 1.6, T_OUT = T_END - 0.15;
 const TEXT = 'ГИПЕРКУБ', SUB = 'УЛЬТИМЕЙТ';
 const CUTS = [0, 0.17, 0.3, 0.46, 0.58, 0.73, 0.87, 1];
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
@@ -92,8 +94,8 @@ export function create(ctx) {
       // glitch amount: in (decaying), two micro hits, out (rising)
       let g = 0;
       if (t < T_IN + 0.3) g = 1 - sm((t - T_IN) / 0.3);
-      if (t > 12.74 && t < 12.79) g = Math.max(g, 0.35);
-      if (t > 13.12 && t < 13.16) g = Math.max(g, 0.25);
+      if (t > T_IN + 0.74 && t < T_IN + 0.79) g = Math.max(g, 0.35);
+      if (t > T_IN + 1.12 && t < T_IN + 1.16) g = Math.max(g, 0.25);
       if (t > T_OUT) g = Math.max(g, sm((t - T_OUT) / 0.1));
       // visibility flicker at the start, CRT collapse at the end
       let op = 1;

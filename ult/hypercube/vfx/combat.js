@@ -8,7 +8,7 @@
 // which crawls at 6 % speed during hit-stop windows, so sparks hold while the characters are frozen.
 import { poseAt, makePlayer, applyPose, bonePoint, sample } from '../rig.js';
 import HITMAP from '../anim/hits.js';
-import { HITS, WORLD, spaceAt } from '../timeline.js';
+import { HITS, WORLD, EVENTS, SHOTS, SPACE, spaceAt } from '../timeline.js';
 import { cameraAt } from '../camera.js';
 
 // ------------------------------------------------------------------------------------------------ helpers
@@ -38,14 +38,26 @@ const since = (t, t0) => fxClock(t) - fxClock(t0);
 const KIND = {
   light: { s: 0.26, n: 4, flash: 0.3, life: 0.07, sparks: 7, lines: 0, ring3: 0, smoke: 0, shards: 0, light: 4, rad: 0.5 },
   medium: { s: 0.42, n: 6, flash: 0.5, life: 0.1, sparks: 13, lines: 8, ring3: 1, smoke: 3, shards: 0, light: 9, rad: 0.8 },
-  heavy: { s: 0.7, n: 8, flash: 0.6, life: 0.12, sparks: 24, lines: 12, ring3: 2, smoke: 7, shards: 14, light: 22, rad: 1.4 },
-  mega: { s: 0.75, n: 8, flash: 1.0, life: 0.2, sparks: 36, lines: 26, ring3: 2, smoke: 10, shards: 26, light: 45, rad: 2.2 },
+  heavy: { s: 0.7, n: 8, flash: 0.6, life: 0.09, sparks: 24, lines: 12, ring3: 2, smoke: 7, shards: 14, light: 22, rad: 1.4 },
+  mega: { s: 0.75, n: 8, flash: 0.8, life: 0.11, sparks: 36, lines: 26, ring3: 2, smoke: 10, shards: 26, light: 45, rad: 2.2 },
 };
 
 let S = null; // module state shared with post()
 
+// ---- every time comes from timeline.js (EVENTS / HITS / SPACE / SHOTS), so a re-timing propagates ----
+const EV = Object.fromEntries(EVENTS.map(e => [e.id, e.t]));
+const MEGAS = HITS.filter(h => h.kind === 'mega');
+const MEGA1 = MEGAS[0], HAMMER = MEGAS[MEGAS.length - 1];
+const T = {
+  charge: EV.charge, throw: EV.throw, dash: EV.dash, plant: EV.dash + 0.25,
+  clones: EV.clones, ring: EV.ring, gap: EV.gap, mega: MEGA1.t, megaEnd: MEGA1.t + MEGA1.stop,
+  launch: EV.launch, above: EV.above, hammer: HAMMER.t,
+  exit: SPACE[SPACE.length - 1].t0, crater: EV.crater, land: EV.land, title: EV.title, fadeOut: EV.fade_out,
+  closeUp: SHOTS[SHOTS.length - 1].t0, length: SHOTS[SHOTS.length - 1].t1,
+};
+
 /** Impact frames (mega hits): {t0, fi} while one is on screen. fi 0–1 black-on-white, 2–3 white-on-black. */
-const IMPACTS = [[8.4, 4], [9.6, 2]];
+const IMPACTS = [[MEGA1.t, 4], [HAMMER.t, 2]];
 export function impactFrame(t) {
   for (const [t0, n] of IMPACTS) { const fi = Math.floor((t - t0) * 60 + 0.02); if (t >= t0 && fi < n) return { t0, fi }; }
   return null;
@@ -114,9 +126,18 @@ void main(){
     float aa = fwidth(d) + 1e-4;
     m = 1.0 - smoothstep(1.0 - aa, 1.0, d);
     o = vC.rgb * (1.0 + 0.8 * (1.0 - d));
-  } else {                             // 7 cross flare: p1 thinness
+  } else if (s < 7.5) {                // 7 cross flare: p1 thinness
     float g = max(exp(-abs(q.y) * vP.y) * (1.0 - abs(q.x)), exp(-abs(q.x) * vP.y) * (1.0 - abs(q.y)));
     m = clamp(g + exp(-r * r * 30.0), 0.0, 1.0);
+  } else {                             // 8 cel-shaded dust puff (normal blend): p1 seed, p2 dissolve 0..1
+    float ang = atan(q.y, q.x);
+    float edge = (0.86 + 0.09 * sin(ang * 5.0 + vP.y * 6.0) + 0.05 * sin(ang * 11.0 - vP.y * 4.0)) * (1.0 - 0.45 * vP.z);
+    float rr = r / edge;
+    float aa = fwidth(rr) * 1.5 + 1e-3;
+    m = 1.0 - smoothstep(1.0 - aa, 1.0, rr);
+    vec3 n = vec3(q / edge, sqrt(max(0.0, 1.0 - min(rr * rr, 1.0))));
+    float l = dot(n, normalize(vec3(-0.3, 0.8, 0.5)));
+    o = vC.rgb * (l > 0.22 ? 1.0 : 0.66) * (l > 0.82 ? 1.1 : 1.0);
   }
   float al = vC.a * m;
   if (al < 0.002) discard;
@@ -512,7 +533,7 @@ export function create(ctx) {
   {
     const def = defs.user, dt = 1 / 240;
     let pv = visOf(def, 0), pp = posOf(def, 0), off = null;
-    for (let i = 1; i <= 15 * 240; i++) {
+    for (let i = 1; i <= T.length * 240; i++) {
       const tt = i * dt, v = visOf(def, tt), p = posOf(def, tt);
       if (pv && !v) off = tt;
       else if (!pv && v && off !== null) { blinks.push({ tOff: off, tOn: tt }); off = null; }
@@ -541,25 +562,25 @@ export function create(ctx) {
   }
   for (const c of clones) {
     let first = null, last = null, pv = false;
-    for (let i = 0; i <= 15 * 240; i++) {
+    for (let i = 0; i <= T.length * 240; i++) {
       const tt = i / 240, v = visOf(c.def, tt);
       if (v && !pv && first === null) first = tt;
       if (!v && pv) last = tt;
       pv = v;
     }
     const always = first === 0 && last === null;
-    c.spawn = always || first === null ? 6.4 + c.i * 0.033 + R(c.i, 1) * 0.02 : first;
-    c.vanish = always || last === null ? 8.6 + c.i * 0.034 + R(c.i, 2) * 0.02 : last;
+    c.spawn = always || first === null ? T.clones + c.i * 0.033 + R(c.i, 1) * 0.02 : first;
+    c.vanish = always || last === null ? T.megaEnd + c.i * 0.034 + R(c.i, 2) * 0.02 : last;
     c.spawnFrom = boneAt(defs.user, c.spawn, 'chest');
     c.spawnAt = boneAt(c.def, c.spawn + 1e-3, 'chest');
     const names = ['head', 'chest', 'pelvis', 'fistR', 'fistL', 'elbowR', 'elbowL', 'footR', 'footL', 'kneeR', 'kneeL', 'back', 'face', 'hipR', 'hipL'];
     const pl = posed(c.def, c.vanish - 1 / 240);
     c.shardPts = names.map(n => bonePoint(THREE, pl, n, new V3()));
     c.shardC = bonePoint(THREE, pl, 'chest', new V3());
-    const e = HITMAP['8.40']; const list = Array.isArray(e) ? e : e ? [e] : [];
+    const e = HITMAP[T.mega.toFixed(2)]; const list = Array.isArray(e) ? e : e ? [e] : [];
     c.limb = (list.find(x => x.id === c.id) || {}).limb || (c.i % 2 ? 'fistL' : 'fistR');
   }
-  const userMegaLimb = (() => { const e = HITMAP['8.40']; const list = Array.isArray(e) ? e : e ? [e] : []; return (list.find(x => x.id === 'user') || {}).limb || 'fistR'; })();
+  const userMegaLimb = (() => { const e = HITMAP[T.mega.toFixed(2)]; const list = Array.isArray(e) ? e : e ? [e] : []; return (list.find(x => x.id === 'user') || {}).limb || 'fistR'; })();
 
   // ---- contact points of the hits (memoised pure function of the animation) ----
   const contactCache = new Map();
@@ -590,13 +611,13 @@ export function create(ctx) {
   }
   // crater / landing follow the animation when it puts the actors there, else the timeline spots
   const near = (p, w, r) => Math.abs(p[1]) < 2 && Math.hypot(p[0] - w[0], p[2] - w[2]) < r;
-  const craterAt = (() => { const p = posOf(defs.victim, 9.85); return near(p, WORLD.crater, 2.5) ? new V3(p[0], 0, p[2]) : new V3(WORLD.crater[0], 0, WORLD.crater[2]); })();
-  const landAt = (() => { const p = posOf(defs.user, 10.4); return near(p, WORLD.landing, 2.5) ? new V3(p[0], 0, p[2]) : new V3(WORLD.landing[0], 0, WORLD.landing[2]); })();
+  const craterAt = (() => { const p = posOf(defs.victim, T.crater); return near(p, WORLD.crater, 2.5) ? new V3(p[0], 0, p[2]) : new V3(WORLD.crater[0], 0, WORLD.crater[2]); })();
+  const landAt = (() => { const p = posOf(defs.user, T.land); return near(p, WORLD.landing, 2.5) ? new V3(p[0], 0, p[2]) : new V3(WORLD.landing[0], 0, WORLD.landing[2]); })();
   // the meteor: the victim's chest when the animation drops them from the cube, else a stand-in path cube → crater
-  const meteorReal = (() => { const p = posOf(defs.victim, 9.84); return spaceAt(9.84) === 'world' && near(p, WORLD.crater, 3); })();
+  const meteorReal = (() => { const tt = T.crater - 0.01, p = posOf(defs.victim, tt); return spaceAt(tt) === 'world' && near(p, WORLD.crater, 3); })();
   const meteorAt = (tt, out) => {
     if (meteorReal) return bonePoint(THREE, posed(defs.victim, tt), 'chest', out);
-    const u = clamp((tt - 9.65) / 0.2), e = u * u * (0.4 + 0.6 * u);
+    const u = clamp((tt - T.exit) / (T.crater - T.exit)), e = u * u * (0.4 + 0.6 * u);
     return out.set(lerp(WORLD.cube[0], craterAt.x, e), lerp(WORLD.cube[1] + 0.3, 0.45, e), lerp(WORLD.cube[2], craterAt.z, e));
   };
 
@@ -625,6 +646,9 @@ export function create(ctx) {
   const scaleAt = (p) => clamp(cam.distanceTo(p) * viewK / 2.6, 0.3, 1.7) * 0.62;
   let lightBest = { I: 0, p: new V3(), col: VIO };
   const offerLight = (p, I, col = VIO) => { if (I > lightBest.I) lightBest = { I, p: p.clone(), col }; };
+  const DUST = [0.5, 0.41, 0.3];
+  /** world dust: a cel-shaded billboard puff that fades and dissolves instead of popping */
+  const puff = (p, size, col, a, seed, dis = 0) => spr(BN, p, size, 8, col, 1, a, 0, seed % 17, clamp(dis));
   const ghostReq = [];
   const wantGhost = (def, tt, a, k) => { if (a > 0.02) ghostReq.push({ def, tt, a, k }); };
 
@@ -636,7 +660,7 @@ export function create(ctx) {
     // sit in front of the body surface (the contact is on/inside the victim; depth would eat the spark)
     const P = Pc.copy(P0).add(tmp3.subVectors(cam, P0).setLength(Math.min(0.3, cam.distanceTo(P0) * 0.25)));
     // local flash (first frames, real time: a light event does not freeze)
-    const lf = 0.03 + k.life * 0.2;
+    const lf = big ? 0.045 : 0.03 + k.life * 0.2;
     if (treal < lf) {
       const u = treal / lf, a = (1 - u) * (1 - u);
       const day = inside ? 1 : 0.6;
@@ -698,7 +722,8 @@ export function create(ctx) {
       drag(Pt, P, Dv, 4.5, inside ? 0 : 0.8, tau);
       Pt.addScaledVector(Dv, 0.12 / (1 + k.s));
       const sc = (0.05 + R(sd, j, 33) * 0.06) * k.s * 2 * sf * (u < 0.12 ? sm(u / 0.12) : 1 - sm((u - 0.12) / 0.88)) * (1 + 0.6 * u);
-      SM.put(Pt, null, sc * (inside ? 0.8 : 1), inside ? [0.06, 0.035, 0.12] : [0.92, 0.88, 0.84]);
+      if (inside) SM.put(Pt, null, sc * 0.8, [0.06, 0.035, 0.12]);
+      else puff(Pt, sc * 1.6, [0.62, 0.58, 0.55], 0.9 * (1 - sm((u - 0.4) / 0.6)), sd + j, sm((u - 0.5) / 0.5));
     }
     // shards: bright energy diamonds + a few dark ones for contrast
     for (let j = 0; j < k.shards; j++) {
@@ -756,52 +781,66 @@ export function create(ctx) {
   }
 
   // ------------------------------------------------------------------------------------------ sections
+  // aura intensity: one snap at T.charge, held with a tremble, swells through the coil, released on the throw
+  const auraAt = (tt) => {
+    if (tt < T.charge) return 0;
+    if (tt < T.throw) return Math.min(1, 0.75 * sm((tt - T.charge) / 0.06) + 0.25 * sm((tt - (T.throw - 0.45)) / 0.45));
+    return 1 - sm((tt - T.throw) / 0.45);
+  };
   function charge(t, f) {
-    if (t < 0.38 || t > 2.15) return;
-    const I = t < 1.6 ? Math.pow(sm((t - 0.4) / 1.2), 1.2) : 1 - sm((t - 1.6) / 0.5);
-    const bt = (t - 0.4) % 0.4, beat = t < 1.62 && t > 0.4 ? Math.exp(-bt * 12) : 0;
+    if (t < T.charge - 0.02 || t > T.throw + 0.6) return;
+    const I = auraAt(t);
+    const bt = (t - T.charge) % 0.4, beat = t > T.charge && t < T.throw ? Math.exp(-bt * 14) : 0;
+    const snap = t > T.charge ? Math.exp(-(t - T.charge) * 9) : 0;
     const root = f.pose('user').pos, pel = f.bone('user', 'pelvis');
-    // rising pixel motes
-    for (let i = 0; i < 64; i++) {
-      const per = 0.7 + R(i, 1) * 0.6, ph = R(i, 2) * per;
+    // rising energy sparks: tiny hot squares + short vertical streaks (not confetti)
+    for (let i = 0; i < 40; i++) {
+      const per = 0.55 + R(i, 1) * 0.5, ph = R(i, 2) * per;
       const cyc = Math.floor((t + ph) / per), age = t + ph - cyc * per, t0 = t - age;
-      if (t0 < 0.4 || t0 > 1.72) continue;
-      const u = age / per, Ia = t0 < 1.6 ? sm((t0 - 0.3) / 1.2) : 1;
-      const ang = R(i, cyc, 3) * TAU + age * (1.2 + R(i, 4) * 1.5) * (i % 2 ? 1 : -1);
-      const rad = (0.28 + R(i, cyc, 5) * 0.5) * (1 - u * 0.4);
-      Pt.set(root[0] + Math.cos(ang) * rad, root[1] + R(i, cyc, 6) * 0.5 + (0.9 + R(i, cyc, 7) * 1.3) * (0.6 + Ia) * age, root[2] + Math.sin(ang) * rad);
-      const a = Math.sin(Math.PI * u) * (0.35 + 0.65 * Ia);
-      spr(B, Pt, 0.018 + R(i, 8) * 0.024, 2, PAL[i % 3], 3 + 2 * Ia, a * (1 - 0.4 * (t > 1.6 ? sm((t - 1.6) / 0.5) : 0)));
+      if (t0 < T.charge || t0 > T.throw + 0.1) continue;
+      const u = age / per, Ia = auraAt(t0);
+      const ang = R(i, cyc, 3) * TAU + age * (1.5 + R(i, 4) * 2) * (i % 2 ? 1 : -1);
+      const rad = (0.25 + R(i, cyc, 5) * 0.4) * (1 - u * 0.5);
+      const vy = (1.2 + R(i, cyc, 7) * 1.6) * (0.6 + Ia);
+      Pt.set(root[0] + Math.cos(ang) * rad, root[1] + R(i, cyc, 6) * 0.4 + vy * age, root[2] + Math.sin(ang) * rad);
+      const a = Math.sin(Math.PI * u) * (0.4 + 0.6 * Ia), col = i % 4 === 0 ? WHT : PAL[i % 3];
+      if (i % 2) { Pt2.copy(Pt); Pt2.y -= 0.05 + 0.08 * Ia; line(B, Pt2, Pt, 0.005 + R(i, 8) * 0.004, col, 2.2, a, 1, 0.5); }
+      else spr(B, Pt, 0.007 + R(i, 8) * 0.008, 2, col, 2.6, a);
     }
-    // violet energy licking up the body
+    // the snap: a ring of sparks bursting off the body
+    if (snap > 0.02) for (let j = 0; j < 16; j++) {
+      const tau = t - T.charge; randUnit(Vel, 31, j); Vel.y = Math.abs(Vel.y) * 0.6; Vel.multiplyScalar(2.5 + R(31, j, 1) * 2);
+      drag(Pt, tmp.set(pel.x, pel.y - 0.3, pel.z), Vel, 6, 0, tau); drag(Pt2, tmp.set(pel.x, pel.y - 0.3, pel.z), Vel, 6, 0, Math.max(0, tau - 0.025));
+      line(B, Pt2, Pt, 0.008, j % 2 ? WHT : VIO, 2.2, snap, 1, 0.6);
+    }
+    // violet energy licking up the body (trembles with the hold)
     const anchors = ['chest', 'pelvis', 'back', 'head', 'fistR', 'fistL', 'elbowR', 'elbowL', 'kneeR', 'kneeL', 'hipR', 'hipL'];
-    for (let j = 0; j < 26; j++) {
-      const per = 0.2 + R(j, 9) * 0.17, ph = R(j, 10) * per;
+    for (let j = 0; j < 22; j++) {
+      const per = 0.18 + R(j, 9) * 0.15, ph = R(j, 10) * per;
       const cyc = Math.floor((t + ph) / per), age = t + ph - cyc * per, u = age / per;
       const P0 = f.bone('user', anchors[j % anchors.length]);
       randUnit(Dv, j, cyc, 11); Dv.y *= 0.3;
-      const len = (0.16 + R(j, cyc, 12) * 0.3) * Math.sin(Math.PI * u) * (0.3 + I) * (1 + beat * 0.4);
-      Pt.copy(P0).addScaledVector(Dv, 0.1 + 0.05 * u); Pt.y += 0.15 * u * (0.5 + I);
-      Pt2.copy(Pt); Pt2.y += len; Pt2.x += Math.sin(u * 5 + j) * 0.06; Pt2.z += Math.cos(u * 4 + j) * 0.06;
-      // tip (thin, dim) → base (fat, bright): A = tip, B = base
-      line(B, Pt2, Pt, (0.025 + R(j, 13) * 0.03) * (0.6 + I * 0.6), j % 3 ? VIO : MAG, 2.2 + 2 * I, I * 0.9 * Math.sin(Math.PI * u), 1.2, 1);
+      const len = (0.14 + R(j, cyc, 12) * 0.26) * Math.sin(Math.PI * u) * (0.3 + I) * (1 + beat * 0.4 + snap);
+      Pt.copy(P0).addScaledVector(Dv, 0.09 + 0.05 * u); Pt.y += 0.12 * u * (0.5 + I);
+      Pt2.copy(Pt); Pt2.y += len; Pt2.x += Math.sin(u * 5 + j) * 0.05; Pt2.z += Math.cos(u * 4 + j) * 0.05;
+      line(B, Pt2, Pt, (0.02 + R(j, 13) * 0.022) * (0.6 + I * 0.5), j % 3 ? VIO : MAG, 1.8 + 1.4 * I, I * 0.85 * Math.sin(Math.PI * u), 1.2, 1);
     }
     // ground glow + aura shell
     if (I > 0.01) {
       Pt.set(root[0], 0.025, root[2]);
-      groundQuad(Pt, 0.9 + 0.5 * I + beat * 0.2, 1, VIO, 1.6, I * 0.6, 1.6);
-      spr(B, pel, 0.9 + 0.4 * I, 0, VIO, 0.6, I * 0.22, 0, 0, 1.5);
-      offerLight(Pt.set(pel.x, pel.y + 0.3, pel.z), 2.5 * I + 2 * beat * I, VIO);
+      groundQuad(Pt, 0.85 + 0.4 * I + beat * 0.15 + snap * 0.6, 1, VIO, 1.4, I * 0.5, 1.8);
+      spr(B, pel, 0.85 + 0.35 * I, 0, VIO, 0.5, I * 0.2, 0, 0, 1.6);
+      offerLight(Pt.set(pel.x, pel.y + 0.3, pel.z), 2.5 * I + 2 * beat * I + 6 * snap, VIO);
     }
   }
   function dash(t, f) {
-    if (t < 2.15 || t > 3.0) return;
+    if (t < T.dash - 0.05 || t > T.dash + 1.2) return;
     const def = defs.user;
-    const p0 = posOf(def, 2.2), p1 = posOf(def, 2.45);
+    const p0 = posOf(def, T.dash), p1 = posOf(def, T.plant);
     Dv.set(p1[0] - p0[0], 0, p1[2] - p0[2]); const dist = Dv.length();
     if (dist < 0.3) Dv.set(0, 0, -1); else Dv.multiplyScalar(1 / dist);
     // ground dust kicked back at departure, and a skid where the user plants
-    for (const [tk, n, back, sd] of [[2.2, 9, -1, 1], [2.45, 7, 1, 2]]) {
+    for (const [tk, n, back, sd] of [[T.dash, 9, -1, 1], [T.plant, 7, 1, 2]]) {
       const tau = t - tk; if (tau < 0 || tau > 1.2) continue;
       const pp = posOf(def, tk);
       for (let j = 0; j < n; j++) {
@@ -809,7 +848,7 @@ export function create(ctx) {
         const u = tau / life, side = (R(sd, j, 2) - 0.5) * 2;
         Vel.set(Dv.x * back * (1.5 + R(sd, j, 3) * 2.5) - Dv.z * side * 1.2, 0.5 + R(sd, j, 4) * 1.4, Dv.z * back * (1.5 + R(sd, j, 3) * 2.5) + Dv.x * side * 1.2);
         drag(Pt, tmp.set(pp[0], 0.1, pp[2]), Vel, 4.5, 0.3, tau);
-        SM.put(Pt, null, (0.08 + R(sd, j, 5) * 0.08) * sm(u / 0.1) * (1 - sm((u - 0.3) / 0.7)), [0.56, 0.47, 0.36], 0.7);
+        puff(Pt, (0.12 + R(sd, j, 5) * 0.1) * sm(u / 0.1) * (1 + 0.6 * u), DUST, 0.85 * (1 - sm((u - 0.4) / 0.6)), sd * 31 + j, sm((u - 0.5) / 0.5));
       }
       for (let j = 0; j < 10; j++) {
         Vel.set(Dv.x * back * (1 + R(sd, j, 6) * 2) + (R(sd, j, 7) - 0.5) * 2, 2 + R(sd, j, 8) * 2.5, Dv.z * back * (1 + R(sd, j, 6) * 2) + (R(sd, j, 9) - 0.5) * 2);
@@ -819,7 +858,7 @@ export function create(ctx) {
       }
     }
     // speed streaks travelling with the user
-    if (t > 2.2 && t < 2.5) {
+    if (t > T.dash && t < T.plant + 0.05) {
       const a = posOf(def, t), b = posOf(def, t - 0.02);
       const sp = Math.hypot(a[0] - b[0], a[2] - b[2]) / 0.02;
       if (sp > 2) {
@@ -840,7 +879,7 @@ export function create(ctx) {
     if (!visOf(def, t)) return;
     const a = posOf(def, t), b = posOf(def, t - 0.03);
     const sp = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) / 0.03;
-    const dashW = t > 2.18 && t < 2.62 ? 1 - sm((t - 2.47) / 0.15) : 0;
+    const dashW = t > T.dash - 0.02 && t < T.plant + 0.17 ? 1 - sm((t - (T.plant + 0.02)) / 0.15) : 0;
     const amt = Math.max(dashW, clamp((sp - 4) / 6));
     if (amt <= 0) return;
     for (let k = 1; k <= 5; k++) {
@@ -940,8 +979,8 @@ export function create(ctx) {
           line(B, Pt, Pt2, 0.06, c.i % 2 ? CYA : VIO, 1.2, (1 - tu) * 0.5, 0.5, 0.6);
         }
       }
-      // fist charge 8.0–8.4 (staggered)
-      fistOrb(t, f, c.id, c.limb, 8.0 + c.i * 0.031 + R(c.i, 7) * 0.05, c.i + 1, c.i % 2 ? CYA : MAG, pose.vis > 0.5);
+      // fist charge from the ring call to the strike (staggered)
+      fistOrb(t, f, c.id, c.limb, T.ring + c.i * 0.031 + R(c.i, 7) * 0.05, c.i + 1, c.i % 2 ? CYA : MAG, pose.vis > 0.5);
       // shatter into light shards
       const tv = t - c.vanish;
       if (tv >= -1 / 60 && tv < 0.9) {
@@ -961,8 +1000,8 @@ export function create(ctx) {
     }
   }
   function fistOrb(t, f, id, limb, t0, sd, col, visible) {
-    if (!visible || t < t0 || t > 8.405) return;
-    const g = sm((t - t0) / 0.27), hold = t > 8.3 ? 1 : 0;
+    if (!visible || t < t0 || t > T.mega + 0.005) return;
+    const g = sm((t - t0) / 0.27), hold = t > T.gap ? 1 : 0;
     const P = f.bone(id, limb);
     const tremble = hold ? 1 + (R(sd, Math.floor(t * 60), 1) - 0.5) * 0.25 : 1 + 0.12 * Math.sin(t * 40 + sd);
     const r = (0.06 + 0.16 * g) * tremble;
@@ -981,10 +1020,10 @@ export function create(ctx) {
   }
   function megaAfter(t, f) {
     // giant sphere shockwave: holds during the 8.40 freeze, bursts at 8.60
-    const tau = since(t, 8.4);
+    const tau = since(t, T.mega);
     sph.visible = false;
     if (tau >= 0 && tau < 1.1 && spaceAt(t) === 'inside') {
-      const C = boneAt(defs.victim, 8.4, 'chest');
+      const C = boneAt(defs.victim, T.mega, 'chest');
       const rad = 0.35 + 11 * (1 - Math.exp(-tau * 3.4)), u = tau / 1.1;
       sph.position.copy(C); sph.scale.setScalar(rad); sph.visible = true;
       sphMat.uniforms.uCol.value.set(...mixc(VIO, CYA, u).map(v => v * 1.5 + 0.12));
@@ -993,9 +1032,9 @@ export function create(ctx) {
       ring3(C, tmp.set(0.15, 1, 0.1).normalize(), rad * 1.15, 0.05, MAG, 1.8, (1 - u) ** 2, 1.5);
       if (tau > 0.02) ring3(C, tmp.set(0.9, 0.2, -0.3).normalize(), rad * 0.9, 0.04, CYA, 1.8, (1 - u) ** 2, 1.5);
     }
-    // lingering energy crackling around the victim 8.6–9.4
-    if (t > 8.58 && t < 9.45 && spaceAt(t) === 'inside') {
-      const C = f.bone('victim', 'chest'), fade = (1 - sm((t - 8.62) / 0.8)) * sm((t - 8.58) / 0.04);
+    // lingering energy crackling around the victim after the release
+    if (t > T.megaEnd - 0.02 && t < T.megaEnd + 0.85 && spaceAt(t) === 'inside') {
+      const C = f.bone('victim', 'chest'), fade = (1 - sm((t - T.megaEnd - 0.02) / 0.8)) * sm((t - T.megaEnd + 0.02) / 0.04);
       for (let j = 0; j < 5; j++) {
         const fr = Math.floor(t * 30 / 2), pts = [];
         randUnit(Dv, 77, j, fr); basis(Dv, U, Vv);
@@ -1014,10 +1053,10 @@ export function create(ctx) {
     }
   }
   function gather(t, f) {
-    if (t < 9.18 || t >= 9.65) return;
+    if (t < T.above - 0.02 || t >= T.exit) return;
     const L = f.bone('user', 'fistL'), Rr = f.bone('user', 'fistR');
     const C = tmp.addVectors(L, Rr).multiplyScalar(0.5); C.y += 0.06;
-    const g = sm((t - 9.2) / 0.4), pul = 1 + 0.08 * Math.sin(t * 50), os = Math.min(1, scaleAt(C) / 0.62);
+    const g = sm((t - T.above) / (T.hammer - T.above)), pul = 1 + 0.08 * Math.sin(t * 50), os = Math.min(1, scaleAt(C) / 0.62);
     const r = (0.06 + 0.2 * g) * pul * os;
     spr(B, C, r * 2.6, 0, VIO, 1.1, 0.5 * g, 0, 0, 2.2);
     spr(B, C, r * 1.5, 0, MAG, 1.3, 0.5 * g, 0, 0.3, 1.8);
@@ -1026,7 +1065,7 @@ export function create(ctx) {
     spr(B, C, r * 1.35, 3, CYA, 1.8, 0.8 * g, 0, 0.12, 1);
     for (let j = 0; j < 30; j++) {
       const per = 0.17 + R(99, j) * 0.14, ph = R(99, j, 1) * per, cyc = Math.floor((t + ph) / per), u = (t + ph - cyc * per) / per;
-      if (t - u * per < 9.17) continue;
+      if (t - u * per < T.above - 0.03) continue;
       randUnit(Dv, 99, j, cyc);
       const r0 = (1.0 + R(99, j, cyc, 2) * 1.3) * os, rr = r + r0 * (1 - u) * (1 - u), len = (0.2 + 0.35 * R(99, j, 3)) * (1 - u * 0.6) * os;
       Pt.copy(C).addScaledVector(Dv, rr); Pt2.copy(C).addScaledVector(Dv, rr + len);
@@ -1044,11 +1083,11 @@ export function create(ctx) {
   }
   const trailPts = Array.from({ length: 22 }, () => new V3());
   function launchTrail(t, f) {
-    if (t < 8.8 || t > 9.38 || spaceAt(t) !== 'inside') return;
-    const fade = 1 - sm((t - 9.18) / 0.2), n = 18;
+    if (t < T.launch || t > T.launch + 0.58 || spaceAt(t) !== 'inside') return;
+    const fade = 1 - sm((t - T.launch - 0.38) / 0.2), n = 18;
     const pts = trailPts.slice(0, n);
     // the trail runs from the pelvis' past positions and stops short of the body (the head lags 2 samples behind)
-    for (let k = 0; k < n; k++) bonePoint(THREE, posed(defs.victim, Math.max(8.79, t - (n + 1 - k) * 0.013)), 'pelvis', pts[k]);
+    for (let k = 0; k < n; k++) bonePoint(THREE, posed(defs.victim, Math.max(T.launch - 0.01, t - (n + 1 - k) * 0.013)), 'pelvis', pts[k]);
     if (pts[0].distanceTo(pts[n - 1]) < 0.15) return;
     const tw = s => Math.pow(Math.sin(Math.PI * Math.min(1, s * 1.15)), 0.7);
     RB.ribbon(pts, cam, s => 0.13 * tw(s), s => { const c = mixc(VIO, WHT, s * s); return [c[0] * 1.8, c[1] * 1.8, c[2] * 1.8, fade * s]; });
@@ -1063,9 +1102,9 @@ export function create(ctx) {
     }
   }
   function meteor(t, f) {
-    if (t < 9.65 || t > 10.15) return;
-    const tEnd = 9.85, n = 22;
-    const head = Math.min(t, tEnd), tail = Math.max(9.65, t - 0.2), fade = t > tEnd ? 1 - sm((t - tEnd) / 0.28) : 1;
+    if (t < T.exit || t > T.crater + 0.3) return;
+    const tEnd = T.crater, n = 22;
+    const head = Math.min(t, tEnd), tail = Math.max(T.exit, t - 0.2), fade = t > tEnd ? 1 - sm((t - tEnd) / 0.28) : 1;
     if (head - tail > 0.004) {
       const pts = trailPts.slice(0, n);
       for (let k = 0; k < n; k++) meteorAt(lerp(tail, head, k / (n - 1)), pts[k]);
@@ -1076,7 +1115,7 @@ export function create(ctx) {
     }
     if (t <= tEnd + 0.02) {
       const C = meteorAt(t, new V3());
-      const vel = meteorAt(Math.max(9.651, t - 0.02), tmp2).sub(C);
+      const vel = meteorAt(Math.max(T.exit + 0.001, t - 0.02), tmp2).sub(C);
       const vl = vel.length(); if (vl > 1e-4) vel.multiplyScalar(1 / vl); else vel.set(0, 1, 0);
       spr(B, C, 1.0, 0, WHT, 2.2, 0.9, 0, 1, 1.8);
       spr(B, C, 2.2, 0, MAG, 1.4, 0.55, 0, 0, 2.4);
@@ -1091,7 +1130,7 @@ export function create(ctx) {
     }
     // embers shed along the path
     for (let j = 0; j < 36; j++) {
-      const ts = 9.65 + j * 0.2 / 36; if (ts > t) break;
+      const ts = T.exit + j * (T.crater - T.exit) / 36; if (ts > t) break;
       const tau = t - ts, life = 0.35 + R(45, j) * 0.3; if (tau > life) continue;
       const P0 = meteorAt(ts, tmp3);
       randUnit(Vel, 45, j, 1).multiplyScalar(1.5 + R(45, j, 2) * 2);
@@ -1126,7 +1165,7 @@ export function create(ctx) {
     }
   }
   function crater(t, f) {
-    const tau = t - 9.85;
+    const tau = t - T.crater;
     scorch.visible = cracks.visible = false;
     if (tau < 0 || spaceAt(t) !== 'world') return;
     const C = craterAt;
@@ -1139,13 +1178,13 @@ export function create(ctx) {
     cracks.material.uniforms.uGlow.value = 0.12 + 1.1 * Math.exp(-tau * 1.3);
     cracks.material.uniforms.uDark.value = 0.85;
     // flash + light pillar
-    if (tau < 0.35) {
-      const u = tau / 0.35;
+    if (tau < 0.22) {
+      const u = tau / 0.22;
       Pt.set(C.x, 0.5, C.z);
       spr(B, Pt, 1.4 * (1 + u), 0, WHT, 1.0, (1 - u) ** 2.5, 0, 0.3, 2.4);
       spr(B, Pt, 2.6, 0, MAG, 0.7, (1 - u) ** 2.5 * 0.4, 0, 0, 2.8);
       Pt2.set(C.x, 9, C.z);
-      if (tau < 0.18) { const v = tau / 0.18; line(B, Pt, Pt2, 0.28 * (1 - v), WHT, 1.6, 1 - v, 0, 0); line(B, Pt, Pt2, 0.7 * (1 - v * 0.5), VIO, 1.1, (1 - v) * 0.45, 0, 0); }
+      if (tau < 0.14) { const v = tau / 0.14; line(B, Pt, Pt2, 0.28 * (1 - v), WHT, 1.6, 1 - v, 0, 0); line(B, Pt, Pt2, 0.7 * (1 - v * 0.5), VIO, 1.1, (1 - v) * 0.45, 0, 0); }
       spr(B, Pt, 1.6 + u * 1.5, 7, WHT, 1.6, (1 - u) ** 2.5, 0.2, 40);
     }
     offerLight(Pt.set(C.x, 0.6, C.z), 70 * Math.exp(-tau * 7) + 1.5 * Math.exp(-tau * 0.8), VIO);
@@ -1210,9 +1249,9 @@ export function create(ctx) {
         life = 1.3 + R(15, j, 5) * 0.6; size0 = 0.18 + R(15, j, 6) * 0.2;
       }
       const u = tau / life; if (u > 1) continue;
-      const sc = size0 * sm(tau / (col ? 0.18 : 0.07)) * (1 + 0.5 * u) * (1 - sm((u - 0.35) / 0.65));
-      const shade = 0.8 + R(15, j, 7) * 0.2;
-      SM.put(p, null, sc, col ? [0.3 * shade, 0.28 * shade, 0.29 * shade] : [0.44 * shade, 0.37 * shade, 0.28 * shade], col ? 1 : 0.85);
+      const sc = size0 * 1.9 * sm(tau / (col ? 0.18 : 0.06)) * (1 + 0.8 * u);
+      const shade = 0.85 + R(15, j, 7) * 0.15;
+      puff(p, sc, col ? [0.3 * shade, 0.28 * shade, 0.29 * shade] : [DUST[0] * shade, DUST[1] * shade, DUST[2] * shade], 0.95 * (1 - sm((u - 0.35) / 0.65)), 150 + j, sm((u - 0.45) / 0.55));
     }
     // smoke still curling out of the crater
     for (let j = 0; j < 9; j++) {
@@ -1220,11 +1259,11 @@ export function create(ctx) {
       if (st < 0.6) continue;
       const u = age / per, a = R(16, j, cyc) * TAU;
       Pt.set(C.x + Math.cos(a) * 0.4 + age * 0.35, 0.2 + age * 0.9, C.z + Math.sin(a) * 0.4 + age * 0.12);
-      SM.put(Pt, null, (0.08 + R(16, j, cyc, 2) * 0.08) * Math.sin(Math.PI * u) * (1 + u), [0.34, 0.32, 0.33]);
+      puff(Pt, (0.16 + R(16, j, cyc, 2) * 0.14) * (0.5 + u), [0.3, 0.29, 0.3], 0.55 * Math.sin(Math.PI * u), 160 + j, sm((u - 0.6) / 0.4));
     }
   }
   function landing(t, f) {
-    const tau = t - 10.4;
+    const tau = t - T.land;
     lcracks.visible = lscorch.visible = false;
     if (tau < 0 || spaceAt(t) !== 'world') return;
     const C = landAt;
@@ -1247,7 +1286,7 @@ export function create(ctx) {
       const rr = 0.3 + v0 * (1 - Math.exp(-kd * tau)) / kd, life = 0.55 + R(17, j, 2) * 0.35, u = tau / life;
       if (u > 1) continue;
       Pt.set(C.x + Math.cos(a) * rr, 0.06 + R(17, j, 3) * 0.08 + 0.18 * (1 - Math.exp(-2 * tau)) * R(17, j, 4), C.z + Math.sin(a) * rr);
-      SM.put(Pt, null, (0.1 + R(17, j, 5) * 0.08) * sm(tau / 0.05) * (1 + 0.6 * u) * (1 - sm((u - 0.3) / 0.7)), [0.44, 0.37, 0.28], 0.8);
+      puff(Pt, (0.17 + R(17, j, 5) * 0.12) * sm(tau / 0.05) * (1 + 0.8 * u), DUST, 0.9 * (1 - sm((u - 0.35) / 0.65)), 170 + j, sm((u - 0.45) / 0.55));
     }
     for (let j = 0; j < 10; j++) {
       const size = 0.06 + R(18, j) * 0.08, a = R(18, j, 1) * TAU, vy = 3 + R(18, j, 2) * 3, vh = 1 + R(18, j, 3) * 2.2;
@@ -1256,8 +1295,8 @@ export function create(ctx) {
     }
   }
   function aftermath(t, f) {
-    if (t < 9.95 || spaceAt(t) !== 'world') return;
-    const ramp = sm((t - 10.0) / 1.2), C = craterAt, L = landAt;
+    if (t < T.crater + 0.1 || spaceAt(t) !== 'world') return;
+    const ramp = sm((t - T.crater - 0.15) / 1.2), C = craterAt, L = landAt;
     // drifting dust (wind blows +x)
     for (let j = 0; j < 44; j++) {
       const per = 2.6 + R(19, j) * 1.6, ph = R(19, j, 1) * per, cyc = Math.floor((t + ph) / per), age = t + ph - cyc * per, u = age / per;
@@ -1269,17 +1308,17 @@ export function create(ctx) {
     // embers rising from the crater and around the user
     for (let j = 0; j < 40; j++) {
       const per = 1.5 + R(20, j) * 1.2, ph = R(20, j, 1) * per, cyc = Math.floor((t + ph) / per), age = t + ph - cyc * per, u = age / per;
-      if (t - age < 9.9) continue;
+      if (t - age < T.crater + 0.05) continue;
       const base = j % 4 === 0 ? L : C, rr = (j % 4 === 0 ? 0.8 : 1.6) * R(20, j, cyc, 2), a = R(20, j, cyc, 3) * TAU;
       Pt.set(base.x + Math.cos(a) * rr + age * 0.35 + Math.sin(age * 3 + j) * 0.12, 0.05 + age * (0.45 + R(20, j, 4) * 0.5), base.z + Math.sin(a) * rr + age * 0.1);
       const fl = 0.6 + 0.4 * Math.sin(t * 23 + j * 1.7);
-      spr(B, Pt, 0.016 + R(20, j, 5) * 0.016, 2, j % 3 === 0 ? MAG : j % 3 === 1 ? EMB : VIO, 3.5, Math.sin(Math.PI * u) * fl * (1 - 0.5 * sm((t - 12.5) / 2)));
+      spr(B, Pt, 0.016 + R(20, j, 5) * 0.016, 2, j % 3 === 0 ? MAG : j % 3 === 1 ? EMB : VIO, 3.5, Math.sin(Math.PI * u) * fl * (1 - 0.5 * sm((t - T.title - 0.5) / 2)));
     }
   }
   function eyes(t, f) {
-    if (t < 13.35 || spaceAt(t) !== 'world') return;
+    if (t < T.closeUp - 0.05 || spaceAt(t) !== 'world') return;
     const pl = actors.user.player; if (!pl.root.visible) return;
-    const g = sm((t - 13.4) / 0.35), fl = 0.85 + 0.15 * Math.sin(t * 7.3) * Math.sin(t * 3.1);
+    const g = sm((t - T.closeUp) / 0.35), fl = 0.85 + 0.15 * Math.sin(t * 7.3) * Math.sin(t * 3.1);
     const head = pl.parts.head; head.updateWorldMatrix(true, false);
     for (const sx of [1.5, -1.5]) {
       Pt.set(sx / 16, 3.5 / 16, -4.7 / 16).applyMatrix4(head.matrixWorld);
@@ -1343,7 +1382,7 @@ export function create(ctx) {
       }
       blinkFX(t, f);
       if (clones.length) cloneFX(t, f);
-      if (t > 7.95 && t < 8.41 && inside) fistOrb(t, f, 'user', userMegaLimb, 8.04, 0, VIO, f.pose('user').vis > 0.5);
+      if (t > T.ring - 0.05 && t < T.mega + 0.01 && inside) fistOrb(t, f, 'user', userMegaLimb, T.ring + 0.04, 0, VIO, f.pose('user').vis > 0.5);
       megaAfter(t, f);
       launchTrail(t, f);
       gather(t, f);
@@ -1380,6 +1419,8 @@ export function post(t, p, f) {
     const q = v.clone().project(cam);
     return [q.x * 0.5 + 0.5, q.y * 0.5 + 0.5];
   };
+  // impact-line centre: kept inside the frame (an off-screen subject would turn the lines into giant wedges)
+  const inFrame = (uv) => uv ? [clamp(uv[0], 0.18, 0.82), clamp(uv[1], 0.22, 0.78)] : [0.5, 0.5];
   let radial = 0, rc = null, chroma = 0, flash = 0, bloom = 0;
   const rips = [];
   const kick = (r, uv) => { if (r > radial) { radial = r; rc = uv; } };
@@ -1395,7 +1436,7 @@ export function post(t, p, f) {
       if (tau < 0.3) rips.push({ c: uv, r: 0.45 * (1 - Math.exp(-tau * 9)), s: 0.012 * (1 - tau / 0.3) });
     } else if (h.kind === 'heavy') {
       if (fi === 0) flash = Math.max(flash, 0.4); else if (fi === 1) flash = Math.max(flash, 0.12);
-      chroma += 0.5 * Math.exp(-tau * 9); bloom += 0.12 * Math.exp(-tau * 10); kick(0.3 * Math.exp(-tau * 12), uv);
+      chroma += 0.5 * Math.exp(-tau * 9); bloom += 0.06 * Math.exp(-tau * 14); kick(0.3 * Math.exp(-tau * 12), uv);
       if (tau < 0.45) {
         rips.push({ c: uv, r: 0.75 * (1 - Math.exp(-tau * 7)), s: 0.028 * (1 - tau / 0.45) });
         if (tau > 0.05) rips.push({ c: uv, r: 0.5 * (1 - Math.exp(-(tau - 0.05) * 7)), s: 0.016 * (1 - tau / 0.45) });
@@ -1403,10 +1444,10 @@ export function post(t, p, f) {
     }
   }
   // ---- mega 8.40: impact frames, frozen grade, then the sphere burst at 8.60 ----
-  const vc = S.boneAt(S.defs.victim, 8.4, 'chest'), vuv = f.space === 'inside' ? toUv(vc) : null;
-  if (t >= 8.4 && t < 8.6) {
-    const fi = Math.floor((t - 8.4) * 60 + 0.02);
-    p.radialCenter = vuv || [0.5, 0.5];
+  const vc = S.boneAt(S.defs.victim, T.mega, 'chest'), vuv = f.space === 'inside' ? toUv(vc) : null;
+  if (t >= T.mega && t < T.megaEnd) {
+    const fi = Math.floor((t - T.mega) * 60 + 0.02);
+    p.radialCenter = inFrame(vuv);
     p.monoThreshold = [0.3, 0.6];
     if (fi <= 3) { p.bloom = { ...p.bloom, strength: 0 }; p.chroma = 0; p.radial = 0; p.ripples = []; p.vignette = 0; p.grain = 0; p.exposure = 1; }
     if (fi <= 1) { p.mono = 1; p.invert = 1; p.lines = 1; p.letterbox = 0; }
@@ -1414,51 +1455,50 @@ export function post(t, p, f) {
     else if (fi <= 5) { flash = Math.max(flash, fi === 4 ? 0.75 : 0.4); p.flashColor = [1, 0.92, 1]; }
     else { p.saturation = 0.35; p.contrast = 1.3; p.vignette = 0.6; chroma += 0.3; p.exposure *= 0.72; }
   }
-  if (t >= 8.6 && t < 9.4) {
-    const tau = t - 8.6, fi = Math.floor(tau * 60 + 0.02);
+  if (t >= T.megaEnd && t < T.megaEnd + 0.8) {
+    const tau = t - T.megaEnd, fi = Math.floor(tau * 60 + 0.02);
     if (fi === 0) flash = Math.max(flash, 0.35);
-    chroma += 0.8 * Math.exp(-tau * 6); bloom += 0.35 * Math.exp(-tau * 6);
+    chroma += 0.8 * Math.exp(-tau * 6); bloom += 0.15 * Math.exp(-tau * 10);
     if (vuv) { kick(0.6 * Math.exp(-tau * 7), vuv); rips.push({ c: vuv, r: 1.1 * (1 - Math.exp(-tau * 3.4)), s: 0.045 * Math.max(0, 1 - tau / 0.7) }); }
   }
   // the gap 8.30–8.40: everything holds its breath
-  if (t >= 8.3 && t < 8.4) { const u = sm((t - 8.3) / 0.05); p.saturation *= 1 - 0.4 * u; p.contrast *= 1 + 0.12 * u; p.vignette += 0.15 * u; }
+  if (t >= T.gap && t < T.mega) { const u = sm((t - T.gap) / 0.05); p.saturation *= 1 - 0.4 * u; p.contrast *= 1 + 0.12 * u; p.vignette += 0.15 * u; }
   // ---- launch 8.80 is a heavy (above); the hammer 9.60: impact frames then a white flash to the cut ----
-  if (t >= 9.6 && t < 9.65) {
-    const fi = Math.floor((t - 9.6) * 60 + 0.02);
-    const c = S.contacts(HITS.findIndex(h => h.t === 9.6))[0];
-    p.radialCenter = toUv(c.P) || [0.5, 0.5]; p.monoThreshold = [0.3, 0.6];
+  if (t >= T.hammer && t < T.exit) {
+    const fi = Math.floor((t - T.hammer) * 60 + 0.02);
+    const c = S.contacts(HITS.indexOf(HAMMER))[0];
+    p.radialCenter = inFrame(toUv(c.P)); p.monoThreshold = [0.3, 0.6];
     if (fi <= 1) { p.bloom = { ...p.bloom, strength: 0 }; p.chroma = 0; p.radial = 0; p.ripples = []; p.vignette = 0; p.grain = 0; p.exposure = 1; }
     if (fi === 0) { p.mono = 1; p.invert = 1; p.lines = 1; p.letterbox = 0; }
     else if (fi === 1) { p.mono = 1; p.invert = 0; p.lines = 1; p.letterbox = 0; }
     else { flash = Math.max(flash, 1); p.flashColor = [1, 0.96, 1]; }
   }
-  if (t >= 9.65 && t < 9.75) flash = Math.max(flash, 0.5 * Math.pow(1 - (t - 9.65) / 0.1, 2));
-  // ---- crater 9.85 ----
+  if (t >= T.exit && t < T.exit + 0.1) flash = Math.max(flash, 0.5 * Math.pow(1 - (t - T.exit) / 0.1, 2));
+  // ---- crater ----
   let shake = 0;
-  if (t >= 9.85 && t < 11.2 && f.space === 'world') {
-    const tau = t - 9.85, fi = Math.floor(tau * 60 + 0.02);
+  if (t >= T.crater && t < T.crater + 1.35 && f.space === 'world') {
+    const tau = t - T.crater, fi = Math.floor(tau * 60 + 0.02);
     const uv = toUv(S.craterAt.clone().setY(0.3)) || [0.5, 0.6];
     if (fi === 0) { flash = Math.max(flash, 0.8); p.flashColor = [1, 0.94, 1]; }
-    else if (fi === 1) { p.invert = 1; p.contrast = 1.3; }
-    else if (fi === 2) flash = Math.max(flash, 0.3);
-    kick(0.9 * Math.exp(-tau * 6), uv); chroma += 0.9 * Math.exp(-tau * 5); bloom += 0.5 * Math.exp(-tau * 6);
+    else if (fi === 1) flash = Math.max(flash, 0.3);
+    kick(0.7 * Math.exp(-tau * 8), uv); chroma += 0.8 * Math.exp(-tau * 6); bloom += 0.2 * Math.exp(-tau * 10);
     if (tau < 0.9) {
       rips.push({ c: uv, r: 1.2 * (1 - Math.exp(-tau * 3.5)), s: 0.04 * (1 - tau / 0.9) });
       if (tau > 0.07) rips.push({ c: uv, r: 0.8 * (1 - Math.exp(-(tau - 0.07) * 3.5)), s: 0.022 * (1 - tau / 0.9) });
     }
     shake += 0.016 * Math.exp(-tau * 4.5);
   }
-  // ---- landing 10.4 ----
-  if (t >= 10.4 && t < 11.2 && f.space === 'world') {
-    const tau = t - 10.4, uv = toUv(S.landAt.clone().setY(0.2)) || [0.5, 0.6];
+  // ---- landing ----
+  if (t >= T.land && t < T.land + 0.8 && f.space === 'world') {
+    const tau = t - T.land, uv = toUv(S.landAt.clone().setY(0.2)) || [0.5, 0.6];
     chroma += 0.3 * Math.exp(-tau * 9); bloom += 0.3 * Math.exp(-tau * 9);
     if (tau < 0.5) rips.push({ c: uv, r: 0.6 * (1 - Math.exp(-tau * 6)), s: 0.018 * (1 - tau / 0.5) });
     shake += 0.006 * Math.exp(-tau * 7);
   }
   if (shake > 1e-4) p.shake = [shake * shakeNoise(t * 38, 1), shake * shakeNoise(t * 41, 2) * 0.8, shake * 2.1 + 0.002];
   // ---- charge: heat shimmer around the user ----
-  if (t > 0.4 && t < 2.0 && f.space === 'world') {
-    const I = t < 1.6 ? sm((t - 0.4) / 1.2) : 1 - sm((t - 1.6) / 0.4);
+  if (t > T.charge && t < T.throw + 0.45 && f.space === 'world') {
+    const I = t < T.throw ? 0.7 + 0.3 * sm((t - (T.throw - 0.45)) / 0.45) : 1 - sm((t - T.throw) / 0.45);
     const head = f.bone('user', 'head'), feet = f.bone('user', 'pelvis').clone(); feet.y = 0;
     const a = toUv(head), b = toUv(feet);
     if (a && b) {
@@ -1466,7 +1506,7 @@ export function post(t, p, f) {
       p.heat = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, r, 0.0028 * I];
     }
   }
-  // ---- clone split 6.4: a quick glitch on each spawn ----
+  // ---- clone split: a quick glitch on each spawn ----
   for (const c of S.clones) { const ts = t - c.spawn; if (ts >= 0 && ts < 0.05) { p.glitch = Math.max(p.glitch || 0, 0.5 * (1 - ts / 0.05)); p.glitchSeed = Math.floor(t * 60); } }
   // ---- blinks: a tiny aberration tick ----
   for (const b of S.blinks) { const ta = t - b.tOn; if (ta >= 0 && ta < 0.08) chroma += 0.2 * (1 - ta / 0.08); }

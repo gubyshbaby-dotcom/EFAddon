@@ -166,6 +166,7 @@ class Sfx:
         self.amb = Mixer(self.n)      # ambience (cut by the silence gap like the music)
         self.duck_events = []         # (t, depth_db, release_s, hold_s) for the music sidechain
         self.hit_log = []
+        self.step_times = []
 
     def add(self, sig, t, gain=1.0, p=0.0, **kw):
         self.mx.add(sig, t, gain, p, **kw)
@@ -184,6 +185,7 @@ class Sfx:
             vel = r.uniform(0.9, 1.08)
             if h['by'] == 'clone':
                 clone_k += 1
+                vel *= 1.15                    # spectral copies: a touch brighter so they read inside the 16th roll
                 p = 0.78 * np.sin(clone_k * TWO_PI / 6 * 2.2 + 0.5) + r.uniform(-0.08, 0.08)
             elif h in bar_hits:
                 p = (0.4 if bar_hits.index(h) % 2 else -0.4) + r.uniform(-0.12, 0.12)
@@ -208,12 +210,12 @@ class Sfx:
             # 2. transient click / crack
             nclk = 6 if h['by'] == 'all' else (2 if kind in ('heavy', 'mega') else 1)
             for c in range(nclk):
-                off = 0 if c == 0 else r.uniform(0.0004, 0.003)
+                off = 0 if c == 0 else r.uniform(0.0004, 0.0015)
                 pc = p if c == 0 else r.uniform(-0.9, 0.9)
                 self.add(click(f'{key}c{c}', r.uniform(0.8, 1.3)), t + off, 1.25 * P['click'] * vel / np.sqrt(max(nclk / 2, 1)),
                          pc, room=P['room'] * 0.5)
             # 3. body thump
-            tau = P['tau'] * r.uniform(0.85, 1.15) * (0.75 if h in fr else 1.0)
+            tau = P['tau'] * r.uniform(0.85, 1.15) * ((0.55 if kind == 'medium' else 0.75) if h in fr else 1.0)
             th = thump(P['f0'] * pm, P['f1'] * pm, tau, key + 't', r.uniform(1.6, 2.4))
             self.add(th, t, 1.2 * P['th'] * vel * r.uniform(0.85, 1.12), p * 0.5, room=P['room'])
             # 4. crunch / noise burst
@@ -225,12 +227,13 @@ class Sfx:
                 self.add(sl, t, 0.5 * vel, p, room=P['room'])
             # 5. heavy / mega: boom with a tail, sub drop, debris, hit-stop ring
             stop = h['stop']
-            if P['boom']:
-                self.add(boom(0.9 if kind == 'heavy' else 1.8, key + 'b', 44 * pm), t, P['boom'] * 0.55 * vel,
+            if P['boom'] and h not in fr:     # the 16th roll keeps its low end tight
+                bd = {'medium': 0.45, 'heavy': 0.9, 'mega': 1.8}[kind]
+                self.add(boom(bd, key + 'b', 44 * pm), t, P['boom'] * 0.55 * vel,
                          hall=P['hall'], room=0.1)
             if P['sub']:
                 self.add(I.subdrop(0.7 if kind == 'heavy' else 1.3, 72 * pm, 32, key + 'sd'), t, P['sub'] * 0.4)
-            if P['deb']:
+            if P['deb'] and h not in fr:      # no rattles inside the 16th roll: the next hit is 0.1 s away
                 d0 = max(stop, 0.06)
                 self.add(debris(0.9 if kind != 'mega' else 1.4, key + 'd', int(25 + 50 * P['deb']), tau=0.25 + 0.2 * P['deb']),
                          t + d0, 0.22 * P['deb'], p * 0.6, room=0.3, hall=0.2)
@@ -245,7 +248,7 @@ class Sfx:
                                      pre=round(float(max(pre, 0)), 3)))
             depth = {'light': 4.5, 'medium': 6.5, 'heavy': 10.0, 'mega': 16.0}[kind]
             rel = {'light': 0.09, 'medium': 0.12, 'heavy': 0.2, 'mega': 0.35}[kind]
-            self.duck_events.append((t, depth, rel, stop))
+            self.duck_events.append((t, depth, rel, stop, 0.03 if kind == 'mega' else 0.002))
 
     def mega_layers(self, h, key, p, r):
         t = h['t']
@@ -503,6 +506,59 @@ class Sfx:
         self.add(gl, tt_, 0.5, hall=0.3)
         self.add(click('titc', 1.3), tt_, 0.6)
 
+    def intro_events(self):
+        """v2 world intro: the charge snap, palm flick, coil, the kick wind-up and the walk to the cube."""
+        tl = self.tl
+        E = tl.ev
+        drop = E('throw')
+        # --- charge snap: impact into the stance, ground cracks, aura burst (the hum starts here too)
+        tc = E('charge')
+        self.add(click('chc', 0.9), tc, 0.7)
+        self.add(thump(135, 48, 0.12, 'chth', 2.2), tc, 0.8, room=0.2)
+        self.add(crunch(0.06, 'chk', 1300), tc, 0.6, room=0.2, hall=0.1)
+        self.add(debris(0.7, 'chdeb', 45, 900, 4500, 0.25, hiss=0.3), tc + 0.04, 0.18, room=0.2)
+        n = ns(0.6)
+        t = tvec(n)
+        fc = 600 * (4000 / 600) ** np.clip(t / 0.25, 0, 1)
+        aura = tvf(np.vstack([noise(n, 'aur0'), noise(n, 'aur1')]), 'bp', fc, 1.0, 32) * np.minimum(t / 0.01, 1) * \
+            np.exp(-t / 0.18)
+        self.add(aura, tc, 0.35, hall=0.3)
+        self.duck_events.append((tc, 4.0, 0.25, 0))
+        # --- palm snaps open: a flick and a little crackle
+        tp = E('palm_open')
+        self.mx.add_end(whoosh(0.07, 'flick', 900, 4200, 1.2), tp, 0.25)
+        n = ns(0.25)
+        t = tvec(n)
+        r = rng('crk')
+        imp = (r.random(n) < 0.004) * r.uniform(-1, 1, n) * np.exp(-t / 0.08)
+        self.add(reson(imp, 5200, 3, 6.0) + reson(imp, 2900, 4, 4.0), tp, 0.3, 0.15, hall=0.2)
+        # --- coil: cloth stretch + an energy suck into the throw
+        tk = E('coil')
+        n = ns(drop - tk)
+        t = tvec(n)
+        cs = bp(noise(n, 'coilc'), 700, 3200) * (0.5 + 0.5 * np.abs(smooth_noise(n, 25, 'coilg', 2.0))) * \
+            np.sin(np.pi * np.clip(t / (drop - tk), 0, 1)) ** 2
+        self.add(cs, tk, 0.2, -0.2, room=0.2)
+        src = boom(0.3, 'coilsrc', 70) + np.vstack([hp(noise(ns(0.3), 'coiln'), 2000) * np.exp(-tvec(ns(0.3)) / 0.05)] * 2)
+        self.mx.add_end(fades(I.reverse_swell(src, self.irs['hall'], drop - tk), 0, 0.01), drop - 0.02, 0.3)
+        # --- kick wind-up: the leg chambers (slow, then the hit's own pre-whoosh snaps in)
+        tw = E('kick_windup')
+        n = ns(0.16)
+        t = tvec(n)
+        sw = tvf(noise(n, 'chamber'), 'bp', 400 * (1500 / 400) ** (t / 0.16), 1.0, 32) * np.sin(np.pi * t / 0.16) ** 2
+        self.add(sw, tw, 0.25, 0.2, room=0.2)
+        # --- the walk to the cube: three calm footsteps in the grass
+        ta, tv = E('approach'), E('dive')
+        steps = [round(ta + 0.05 + k * (tv - 0.15 - ta - 0.05) / 2, 3) for k in range(3)]
+        self.step_times = steps
+        for k, ts in enumerate(steps):
+            r = rng(f'step{k}')
+            self.add(thump(115 * r.uniform(0.9, 1.1), 62, 0.035, f'stp{k}', 1.6), ts, 0.45, room=0.2)
+            m = ns(0.12)
+            gr = bp(noise(m, f'grass{k}'), 1200, 6000) * np.exp(-tvec(m) / 0.03) * \
+                (0.6 + 0.4 * (r.random(m) < 0.3))
+            self.add(gr, ts + 0.004, 0.3, -0.25 + 0.5 * (k % 2), room=0.2)
+
     def metal_hit(self, key, f0, ratio=None):
         r = rng(key)
         n = ns(1.6)
@@ -571,6 +627,7 @@ class Sfx:
     def render(self):
         self.ambience()
         self.events()
+        self.intro_events()
         self.hits()
         return self
 

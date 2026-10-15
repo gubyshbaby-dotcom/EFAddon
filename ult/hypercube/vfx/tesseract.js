@@ -8,7 +8,7 @@
 // textures, hashes, effTime/hitPulse. Everything is a pure function of the scene time t.
 import * as THREE from 'three';
 import { poseAt, makePlayer, applyPose, bonePoint, sample, PX } from '../rig.js';
-import { HITS, WORLD, BEAT } from '../timeline.js';
+import { HITS, WORLD, BEAT, EVENTS } from '../timeline.js';
 
 // ---------------------------------------------------------------------------------------------------------------- utils
 export const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
@@ -560,26 +560,36 @@ function palmPoint(pl, lift, out = new THREE.Vector3()) {
 }
 
 // ---------------------------------------------------------------------------------------------------------- world plan
+// All times come from timeline EVENTS (v2): snappy effects keep their real durations relative to their event, ambient ones
+// (cracks, grid shimmer, seed growth) fill the holds between events.
+const EV = Object.fromEntries(EVENTS.map(e => [e.id, e.t]));
+const T_CHARGE = EV.charge ?? 1.2, T_PALM = EV.palm_open ?? 2.0, T_SEED = EV.seed ?? 2.2, T_COIL = EV.coil ?? 2.8;
+const T_THROW = EV.throw ?? 3.2, T_REL = T_THROW + 0.02, T_UNF = EV.unfold ?? 3.4, T_DASH = EV.dash ?? 4.0;
+const T_KICK = EV.kick_in ?? 4.8, T_SWAL = EV.swallow ?? 5.2, T_SHUT = EV.close ?? 5.6, T_DIVE = EV.dive ?? 6.4, T_IN = EV.inside ?? 6.6;
+const T_EXIT = EV.exit ?? 12.85, T_SHAT = (EV.meteor ?? 13.0) - 0.02;
+const B1 = T_DASH, B2 = T_DASH + BEAT; // beat clicks of the resting cube (dash, grab)
 const Q = Math.PI / 2;
 // 4D angles in quarter turns. Rest (cube-in-cube, faces axis-aligned) whenever every angle is a whole number.
 const ROT = {
-  xw: [[0.4, 0], [1.0, 0.35, 'smooth'], [1.2, 0.9, 'smooth'], [1.6, 3.0, 'smooth'], [1.8, 4.3, 'smooth'], [2.0, 5.3, 'smooth'], [2.2, 5.85, 'smooth'], [2.32, 6.0, 'smooth'],
-    [2.34, 6.0], [2.46, 7.0, 'backOut'], [3.0, 7.0], [3.19, 9.0, 'cubicOut'], [9.65, 9.0], [9.78, 14.0, 'quadIn'], [10.4, 16.0, 'expoOut']],
-  yw: [[0.4, 0], [1.2, 0.4, 'smooth'], [1.6, 1.6, 'smooth'], [1.8, 2.4, 'smooth'], [2.1, 3.6, 'smooth'], [2.34, 4.0, 'smooth'], [9.65, 4.0], [9.78, 7.0, 'quadIn'], [10.4, 8.0, 'expoOut']],
-  zw: [[3.0, 0], [3.17, 2.0, 'cubicOut'], [9.65, 2.0], [9.78, 5.0, 'quadIn'], [10.4, 6.0, 'expoOut']],
-  xz: [[0.4, 0], [1.2, 0.25, 'smooth'], [1.6, 1.0, 'smooth'], [1.8, 1.45, 'smooth'], [2.3, 2.0, 'smooth'], [9.65, 2.0], [9.78, 3.0, 'quadIn']],
-  yz: [[1.2, 0], [1.6, 0.35, 'smooth'], [1.9, 0.3, 'smooth'], [2.3, 0, 'smooth']],
+  xw: [[T_CHARGE, 0], [T_PALM, 0.35, 'smooth'], [T_SEED, 0.9, 'smooth'], [T_COIL, 2.4, 'smooth'], [T_THROW, 3.6, 'smooth'], [T_UNF, 4.6, 'smooth'],
+    [T_UNF + 0.2, 5.4, 'smooth'], [T_UNF + 0.4, 5.85, 'smooth'], [T_UNF + 0.52, 6.0, 'smooth'], [B1 - 0.12, 6.0], [B1, 7.0, 'backOut'],
+    [T_SHUT, 7.0], [T_SHUT + 0.19, 9.0, 'cubicOut'], [T_EXIT, 9.0], [T_SHAT, 14.0, 'quadIn'], [T_SHAT + 0.62, 16.0, 'expoOut']],
+  yw: [[T_CHARGE, 0], [T_SEED, 0.4, 'smooth'], [T_COIL, 1.0, 'smooth'], [T_THROW, 1.8, 'smooth'], [T_UNF, 2.6, 'smooth'], [T_UNF + 0.3, 3.6, 'smooth'],
+    [T_UNF + 0.54, 4.0, 'smooth'], [B2 - 0.12, 4.0], [B2, 5.0, 'backOut'], [T_EXIT, 5.0], [T_SHAT, 8.0, 'quadIn'], [T_SHAT + 0.62, 9.0, 'expoOut']],
+  zw: [[T_SHUT, 0], [T_SHUT + 0.17, 2.0, 'cubicOut'], [T_EXIT, 2.0], [T_SHAT, 5.0, 'quadIn'], [T_SHAT + 0.62, 6.0, 'expoOut']],
+  xz: [[T_CHARGE, 0], [T_SEED, 0.25, 'smooth'], [T_COIL, 0.6, 'smooth'], [T_THROW, 1.0, 'smooth'], [T_UNF, 1.45, 'smooth'], [T_UNF + 0.5, 2.0, 'smooth'],
+    [T_EXIT, 2.0], [T_SHAT, 3.0, 'quadIn']],
+  yz: [[T_SEED, 0], [T_COIL, 0.2, 'smooth'], [T_THROW, 0.35, 'smooth'], [T_UNF + 0.1, 0.3, 'smooth'], [T_UNF + 0.5, 0, 'smooth']],
 };
 function worldAngles(t) {
   const A = {};
   for (const k of Object.keys(ROT)) A[k] = sample(ROT[k], t) * Q;
   // breathing: the inner cell drifts a little at rest so the object is never dead still
-  const br = smooth(2.3, 2.6, t) * (1 - smooth(2.86, 2.98, t));
+  const br = smooth(T_UNF + 0.5, T_UNF + 0.8, t) * (1 - smooth(T_SHUT - 0.14, T_SHUT - 0.02, t));
   A.yw += br * 0.16 * Math.sin(t * Math.PI * 2 / (BEAT * 4));
   A.xw += br * 0.11 * Math.sin(t * Math.PI * 2 / (BEAT * 2) + 1);
   return A;
 }
-const T_SEED = 1.2, T_REL = 1.62, T_UNF = 1.8, T_SHUT = 3.0, T_DIVE = 3.2, T_IN = 3.4, T_EXIT = 9.65, T_SHAT = 9.78;
 const SEED_H = 0.075, CUBE_H = 1.8;
 
 let S = null; // module state for post()
@@ -595,10 +605,10 @@ export function create(ctx) {
   const REL = palmPoint(hid.user.pl, 0.08 + SEED_H);
   const crack0 = poseAt(W.user.def, 0.4).pos;
   // swallow: where the victim's chest enters the outer cell
-  let tc = 2.8, pc = new THREE.Vector3(CUBE.x, CUBE.y, CUBE.z + CUBE_H);
+  let tc = T_SWAL, pc = new THREE.Vector3(CUBE.x, CUBE.y, CUBE.z + CUBE_H);
   {
     let prev = null;
-    for (let t = 2.55; t <= 3.1; t += 1 / 240) {
+    for (let t = T_KICK - 0.05; t <= T_SHUT + 0.1; t += 1 / 240) {
       const p = boneAt(hid.victim, 'chest', t);
       const inside = Math.abs(p.x - CUBE.x) < CUBE_H && Math.abs(p.y - CUBE.y) < CUBE_H && Math.abs(p.z - CUBE.z) < CUBE_H;
       if (inside && prev) {
@@ -756,13 +766,14 @@ export function create(ctx) {
   function seedState(t, f) {
     // returns {c, s, phase}
     const chest = f.bone('user', 'chest');
-    if (t < 1.0) return { c: chest, s: 2.7, ph: 'grid' };
+    if (t < T_CHARGE) return { c: chest, s: 2.7, ph: 'idle' };
+    if (t < T_PALM) return { c: chest, s: 2.7, ph: 'grid' };
     const palm = palmPoint(W.user.player, 0.08 + SEED_H, new THREE.Vector3());
     if (t < T_SEED) {
-      const u = expoIn(ramp(1.0, T_SEED, t));
-      return { c: chest.lerp(palm, smooth(1.0, 1.17, t)), s: lerp(2.7, SEED_H, u), ph: 'gather' };
+      const u = expoIn(ramp(T_PALM, T_SEED, t));
+      return { c: chest.lerp(palm, smooth(T_PALM, T_PALM + 0.17, t)), s: lerp(2.7, SEED_H * 0.72, u), ph: 'gather' };
     }
-    if (t < T_REL) return { c: palm, s: SEED_H, ph: 'seed' };
+    if (t < T_REL) return { c: palm, s: SEED_H * lerp(0.72, 1, smooth(T_SEED, T_COIL, t)), ph: 'seed' };  // grows a little to the coil
     if (t < T_UNF) return { c: throwPos(t), s: SEED_H * 1.15, ph: 'throw' };
     if (t < T_IN) return { c: CUBE.clone(), s: unfoldScale(t), ph: 'cube' };
     if (t < T_EXIT) return { c: CUBE.clone(), s: CUBE_H, ph: 'hidden' };
@@ -776,12 +787,12 @@ export function create(ctx) {
   }
   function unfoldScale(t) {
     if (t < T_UNF) return SEED_H;
-    const u = ramp(T_UNF, 2.2, t);
+    const u = ramp(T_UNF, T_UNF + 0.4, t);
     let s = lerp(SEED_H * 1.15, CUBE_H, backOut(u, 1.6));
     // close: the cell snaps a touch smaller and back
     s *= 1 - 0.08 * Math.sin(Math.PI * ramp(T_SHUT, T_SHUT + 0.14, t));
     // kick lands: a short swell
-    s *= 1 + 0.025 * Math.exp(-Math.max(0, effTime(t) - effTime(2.6)) * 9) * (t >= 2.6 ? 1 : 0);
+    s *= 1 + 0.025 * Math.exp(-Math.max(0, effTime(t) - effTime(T_KICK)) * 9) * (t >= T_KICK ? 1 : 0);
     return s;
   }
   function exitScale(t) {
@@ -790,6 +801,14 @@ export function create(ctx) {
   }
 
   function update(t, f) {
+    // debug only (my probe passes vfxa=camW / camI): fixed review cameras independent of camera.js
+    if (DBG.includes('camW') || DBG.includes('camI')) {
+      const c = f.camera, inS = f.space === 'inside';
+      if (inS) { c.position.set(3.2, 61.2, 3.6); c.fov = 55; c.lookAt(0, 60.3, 0); }
+      else if (t >= T_EXIT) { c.position.set(7.5, 0.6, 2.6); c.fov = 55; c.lookAt(0, 2.2, -6.8); }
+      else { c.position.set(5.2, 1.5, 1.4); c.fov = 55; c.lookAt(0, 1.5, -5.0); }
+      c.updateProjectionMatrix(); c.updateMatrixWorld(true);
+    }
     frameShared(t, f, ctx);
     const inWorld = f.space === 'world';
     const st = seedState(t, f);
@@ -801,16 +820,16 @@ export function create(ctx) {
     if (inWorld) {
       tess.beams.u.uNear.value = st.ph === 'grid' || st.ph === 'gather' ? 0.7 : 0.15;
       if (st.ph === 'grid') {
-        edge = 0.32 * smooth(0.4, 0.75, t) * (0.75 + 0.25 * Math.sin(t * 31) * Math.sin(t * 17.3)); flare = edge * 0.6;
-        tess.beams.u.uClipY.value = lerp(-0.5, 6, smooth(0.4, 1.0, t));
+        edge = 0.32 * smooth(T_CHARGE, T_CHARGE + 0.35, t) * (0.75 + 0.25 * Math.sin(t * 31) * Math.sin(t * 17.3)); flare = edge * 0.6;
+        tess.beams.u.uClipY.value = lerp(-0.5, 6, smooth(T_CHARGE, T_CHARGE + 0.7, t));
       } else if (st.ph === 'gather') {
-        const u = ramp(1.0, T_SEED, t);
-        edge = lerp(0.32, 2.0, u * u); flare = lerp(0.2, 1.6, u); face = smooth(1.12, 1.2, t);
+        const u = ramp(T_PALM, T_SEED, t);
+        edge = lerp(0.32, 2.0, u * u); flare = lerp(0.2, 1.6, u); face = smooth(T_SEED - 0.08, T_SEED, t);
         tess.beams.u.uClipY.value = 1e6;
-      } else if (st.ph === 'seed') { edge = 1.7 + 0.5 * beat; flare = 1.3 + 0.4 * beat; face = 1; }
+      } else if (st.ph === 'seed') { const coil = smooth(T_COIL, T_THROW, t); edge = 1.7 + 0.5 * beat + 0.9 * coil; flare = 1.3 + 0.4 * beat + 0.8 * coil; face = 1 + 0.6 * coil; }
       else if (st.ph === 'throw') { edge = 2.2; flare = 1.6; face = 1; }
       else if (st.ph === 'cube') {
-        const unf = ramp(T_UNF, 2.2, t);
+        const unf = ramp(T_UNF, T_UNF + 0.4, t);
         edge = lerp(1.8, 1.0, unf) + 0.25 * beat + 0.8 * Math.exp(-Math.max(0, t - T_SHUT) * 10) * (t >= T_SHUT ? 1 : 0) + 0.8 * smooth(T_DIVE, T_IN, t);
         flare = 0.5 + 0.2 * beat + 1.0 * Math.exp(-Math.max(0, t - T_SHUT) * 10) * (t >= T_SHUT ? 1 : 0);
         face = 1;
@@ -823,7 +842,7 @@ export function create(ctx) {
       tess.beams.u.uGlitch.value = st.ph === 'exit' && t < T_SHAT ? 0.35 : 0;
     }
     P = {
-      c: st.c, s: st.s, A, edge, flare, face, flowN: 2, edgeMul: st.ph === 'grid' ? 0.25 : st.ph === 'gather' ? lerp(0.25, 1, Math.pow(ramp(1.0, T_SEED, t), 4)) : 1, flowS: st.ph === 'cube' ? 1.0 : 2.2,
+      c: st.c, s: st.s, A, edge, flare, face, flowN: 2, edgeMul: st.ph === 'grid' ? 0.25 : st.ph === 'gather' ? lerp(0.25, 1, Math.pow(ramp(T_PALM, T_SEED, t), 4)) : 1, flowS: st.ph === 'cube' ? 1.0 : 2.2,
       uOpen: st.ph === 'exit' ? 0.6 : 1,
       uShut: st.ph === 'exit' ? 1 : (st.ph === 'cube' ? ramp(T_SHUT, T_SHUT + 0.07, t) : 0),
       uDive: 0,
@@ -845,10 +864,10 @@ export function create(ctx) {
     if (inWorld) {
       light.position.copy(st.c);
       let li = 0;
-      if (st.ph === 'gather') li = 0.05 * smooth(1.1, 1.2, t);
-      else if (st.ph === 'seed') li = 0.04 + 0.02 * beat;
+      if (st.ph === 'gather') li = 0.05 * smooth(T_SEED - 0.1, T_SEED, t);
+      else if (st.ph === 'seed') li = 0.04 + 0.02 * beat + 0.05 * smooth(T_COIL, T_THROW, t);
       else if (st.ph === 'throw') li = 0.4;
-      else if (st.ph === 'cube') li = lerp(1, 7, smooth(T_UNF, 2.0, t)) + 8 * Math.exp(-Math.max(0, t - T_SHUT) * 8) * (t >= T_SHUT ? 1 : 0) + 6 * smooth(T_DIVE, T_IN, t) + 6 * Math.exp(-Math.max(0, t - T_UNF) * 6) * (t >= T_UNF ? 1 : 0);
+      else if (st.ph === 'cube') li = lerp(1, 7, smooth(T_UNF, T_UNF + 0.2, t)) + 8 * Math.exp(-Math.max(0, t - T_SHUT) * 8) * (t >= T_SHUT ? 1 : 0) + 6 * smooth(T_DIVE, T_IN, t) + 6 * Math.exp(-Math.max(0, t - T_UNF) * 6) * (t >= T_UNF ? 1 : 0);
       else if (st.ph === 'exit') li = t < T_SHAT ? lerp(4, 9, ramp(T_EXIT, T_SHAT, t)) : 14 * Math.exp(-(t - T_SHAT) * 6);
       light.intensity = DBG.includes('nolight') ? 0 : li;
       light.distance = st.ph === 'seed' || st.ph === 'gather' ? 2.5 : 16;
@@ -877,9 +896,10 @@ export function create(ctx) {
       portalMat.uniforms.uDive.value = dv;
     }
     // ground cracks
-    const cp = smooth(0.4, 1.55, t) * 0.92 + 0.08 * smooth(1.6, 1.8, t);
+    const cp = 0.5 * expoOut(ramp(T_CHARGE, T_CHARGE + 0.35, t)) + 0.42 * smooth(T_CHARGE + 0.25, T_THROW - 0.2, t) + 0.08 * smooth(T_THROW, T_UNF, t);
     crackMat.uniforms.uProg.value = cp;
-    crackMat.uniforms.uI.value = inWorld && t < 3.4 ? smooth(0.38, 0.5, t) * (1 - smooth(2.4, 3.3, t)) * (0.8 + 0.35 * beat + 0.8 * Math.exp(-Math.max(0, t - 1.6) * 6) * (t >= 1.6 ? 1 : 0)) : 0;
+    const since = (t0) => (t >= t0 ? Math.exp(-(t - t0) * 6) : 0);
+    crackMat.uniforms.uI.value = inWorld && t < T_IN ? smooth(T_CHARGE - 0.02, T_CHARGE + 0.06, t) * (1 - smooth(T_DASH + 0.2, T_SWAL + 0.3, t)) * (0.8 + 0.35 * beat + 0.9 * since(T_CHARGE) + 0.8 * since(T_THROW)) : 0;
     crackMesh.visible = crackMat.uniforms.uI.value > 0;
     // ring
     const ru = ramp(T_UNF, T_UNF + 0.75, t);
@@ -920,25 +940,27 @@ export function create(ctx) {
 
   function worldFx(t, f, st, B, Sp, D, beat) {
     // aura motes rising from the cracks (0.45 → 2.6)
-    if (t > 0.42 && t < 2.8) {
-      for (let i = 0; i < 90; i++) {
+    if (t > T_CHARGE && t < T_DASH + 0.6) {
+      for (let i = 0; i < 130; i++) {
         const h = k => hash(i, 40 + k);
         const cpnt = crackPts[Math.floor(h(0) * crackPts.length)];
         if (!cpnt || cpnt[2] > 0.75) continue;
-        const t0 = 0.45 + cpnt[2] * 1.0 + h(1) * 0.9, life = 0.8 + 0.7 * h(2), a = (t - t0) / life;
+        const burst = i < 40;
+        const t0 = burst ? T_CHARGE + 0.02 + h(1) * 0.12 : T_CHARGE + 0.1 + cpnt[2] * 0.6 + h(1) * (T_DASH - T_CHARGE - 0.8);
+        const life = (burst ? 0.6 : 0.8) + 0.7 * h(2), a = (t - t0) / life;
         if (a < 0 || a > 1) continue;
         const x = crack0[0] + (cpnt[0] - 0.5) * 8, z = crack0[2] - (cpnt[1] - 0.5) * 8;
-        const y = 0.03 + (0.5 + 1.0 * h(3)) * (t - t0) + 0.2 * a * a;
+        const y = 0.03 + (burst ? 1.4 + 1.2 * h(3) : 0.5 + 1.0 * h(3)) * (t - t0) + 0.2 * a * a;
         const sw = 0.06 * Math.sin((t - t0) * (4 + 3 * h(4)) + h(5) * 6);
         const col = h(6) < 0.5 ? COL.violet : (h(6) < 0.8 ? COL.magenta : COL.cyan);
-        Sp.push([x + sw, y, z + sw * 0.6], 0.011 + 0.013 * h(7), 0, col, 2.2 * Math.sin(Math.PI * a) * (1 - smooth(2.3, 2.8, t)), 0);
+        Sp.push([x + sw, y, z + sw * 0.6], 0.011 + 0.013 * h(7), 0, col, 2.2 * Math.sin(Math.PI * a) * (1 - smooth(T_DASH - 0.1, T_DASH + 0.4, t)), 0);
       }
     }
     // gather: motes stream into the palm (0.98 → 1.2)
-    if (t > 0.95 && t < T_SEED + 0.02) {
+    if (t > T_PALM - 0.05 && t < T_SEED + 0.02) {
       for (let i = 0; i < 28; i++) {
         const h = k => hash(i, 90 + k);
-        const t0 = 0.95 + h(0) * 0.12, a = clamp((t - t0) / (T_SEED - t0));
+        const t0 = T_PALM - 0.05 + h(0) * 0.12, a = clamp((t - t0) / (T_SEED - t0));
         if (t < t0) continue;
         const dir = new THREE.Vector3(h(1) - 0.5, h(2) - 0.3, h(3) - 0.5).normalize();
         const r = (0.5 + 1.2 * h(4)) * Math.pow(1 - a, 2);
@@ -961,7 +983,7 @@ export function create(ctx) {
     if (st.ph === 'seed') {
       const fr = Math.floor(t * 30);
       for (let k = 0; k < 3; k++) {
-        if (hash(fr, 500 + k) < 0.3) continue;
+        if (hash(fr, 500 + k) < (t > T_COIL ? 0.08 : 0.3)) continue;
         const h = m => hash(fr * 7 + k, 600 + m);
         const dir = new THREE.Vector3(h(0) - 0.5, h(1) - 0.7, h(2) - 0.5).normalize();
         const end = st.c.clone().addScaledVector(dir, 0.1 + 0.12 * h(3));
@@ -1134,9 +1156,9 @@ export function create(ctx) {
   function fractCol(x) { const k = (x * 3.7) % 1; return k < 0.45 ? COL.violet : k < 0.75 ? COL.magenta : COL.cyan; }
 
   function tunnelFx(t, tb) {
-    const on = smooth(3.22, 3.3, t) * (1 - smooth(3.45, 3.6, t));
+    const on = smooth(T_DIVE + 0.02, T_DIVE + 0.1, t) * (1 - smooth(T_IN + 0.05, T_IN + 0.2, t));
     if (on <= 0) return;
-    const speed = t < T_IN ? lerp(25, 70, ramp(T_DIVE, T_IN, t)) : lerp(70, 18, ramp(T_IN, 3.6, t));
+    const speed = t < T_IN ? lerp(25, 70, ramp(T_DIVE, T_IN, t)) : lerp(70, 18, ramp(T_IN, T_IN + 0.2, t));
     // integrated travel (closed form, piecewise)
     const ta = Math.min(t, T_IN) - T_DIVE, tbb = Math.max(0, t - T_IN);
     const travel = 25 * ta + 22.5 * ta * ta / 0.2 + (70 * tbb - 0.5 * (52 / 0.2) * tbb * tbb * (tbb < 0.2 ? 1 : 0));
@@ -1157,11 +1179,12 @@ export function create(ctx) {
 
 export function post(t, p, f) {
   if (!S || DBG.includes('nopostA')) return p;
+  if (DBG.includes('logp')) console.log('[vfxA] post in ' + JSON.stringify(p));
   const sc = S.cubeScreen || [0.5, 0.5];
   const space = f.space;
   if (space === 'world' && t < T_IN) {
     // charge: a touch of violet in the grade
-    const ch = smooth(0.4, 1.2, t) * (1 - smooth(1.6, 2.2, t));
+    const ch = smooth(T_CHARGE, T_PALM, t) * (1 - smooth(T_THROW, T_UNF + 0.4, t));
     p.saturation *= 1 + 0.08 * ch;
     // unfold burst
     if (t >= T_UNF) {
@@ -1203,5 +1226,6 @@ export function post(t, p, f) {
       p.bloom.strength = Math.max(p.bloom.strength, 0.55 + 0.2 * Math.exp(-a * 10));
     }
   }
+  if (DBG.includes('logp')) console.log('[vfxA] post out ' + JSON.stringify(p));
   return p;
 }

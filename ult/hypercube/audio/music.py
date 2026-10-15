@@ -73,9 +73,9 @@ class Score:
             self.drum(I.snare(1.0, f'{key}{k}', tone=tone0 + (tone1 - tone0) * u, decay=0.07), t,
                       gain * (v0 + (v1 - v0) * u ** 1.4), 0.3 * np.sin(k * 2.1), room=0.15, void=0.15)
 
-    def backbeat(self, t, gain=0.55, key='bb'):
-        self.drum(I.clap(1.0, key + 'c'), t, gain * 1.0, 0.0, room=0.25, void=0.25)
-        self.drum(I.snare(1.0, key + 's'), t, gain * 0.55, 0.0, room=0.2, void=0.2)
+    def backbeat(self, t, gain=0.55, key='bb', tail=0.16, decay=0.12):
+        self.drum(I.clap(1.0, key + 'c', tail), t, gain * 1.0, 0.0, room=0.25, void=0.25)
+        self.drum(I.snare(1.0, key + 's', decay=decay), t, gain * 0.55, 0.0, room=0.2, void=0.2)
 
     def kick(self, t, vel=1.0, big=False, key='k', decay=0.16):
         k = I.kick_big(1.0, key + 'B') if big else I.kick(1.0, key, decay=decay)
@@ -101,64 +101,100 @@ class Score:
         kick_in = tl.ev('kick_in')
         hall, void = self.irs['hall'], self.irs['void']
 
-        # ============================================================ 0 - 1.6 AWAKEN: drone, heartbeat, riser, swell
+        charge, palm, coil = tl.ev('charge'), tl.ev('palm_open'), tl.ev('coil')
+        dash, windup = tl.ev('dash'), tl.ev('kick_windup')
+        hold0 = dash + 0.25                     # the plant after the grab: the beat stops for the face-to-face hold
+        build = dive - B                        # the build into the dive starts a beat before it
+
+        # ============================================================ AWAKEN: idle -> charge snap -> palm/seed -> coil
         dur = drop - a0
-        dr = I.drone([D2, A2, D3], dur + 0.02, 'drone0', cutoff=(160, 1100))
-        t = tvec(dr.shape[-1])
-        lvl = np.interp(t, [0, dur * 0.6, dur - 0.12, dur - 0.04, dur + 0.02], [0.35, 0.75, 1.0, 0.12, 0.0])
+        dr = I.drone([D2, A2, D3], dur + 0.02, 'drone0', cutoff=(140, 1100))
+        t = tvec(dr.shape[-1]) + a0
+        lvl = np.interp(t, [a0, charge - 0.01, charge + 0.05, coil, drop - 0.12, drop - 0.04, drop + 0.02],
+                        [0.30, 0.36, 0.62, 0.85, 1.0, 0.12, 0.0])
         self.pads.add(dr * lvl, a0, 0.45, hall=0.25)
-        tri = I.supersaw_pad([Ab2, Eb3], dur * 0.6, 'tritone0', cutoff=700, attack=dur * 0.5, release=0.1)
-        self.pads.add(tri, a0 + dur * 0.4, 0.10, hall=0.4)
-        self.pads.add(I.choir([D2, A2], dur * 0.75, 'choir0', 'u', attack=dur * 0.6, release=0.12), a0 + dur * 0.2,
+        tri = I.supersaw_pad([Ab2, Eb3], drop - charge, 'tritone0', cutoff=700, attack=(drop - charge) * 0.6,
+                             release=0.1)
+        self.pads.add(tri, charge, 0.10, hall=0.4)
+        self.pads.add(I.choir([D2, A2], drop - palm, 'choir0', 'u', attack=(drop - palm) * 0.7, release=0.12), palm,
                       0.30, hall=0.5)
-        # heartbeat sub pulse on the beats (lub on the beat, dub just after), growing
-        nb = int(round(dur / B))
+        # heartbeat sub pulse on the beats (lub on the beat, dub just after): quiet in the idle, stronger after the
+        # charge, and it stops for the coil (the reverse swell takes over)
+        nb = int(round((coil - a0) / B))
         for k in range(nb):
-            tb = a0 + k * B
-            v = 0.45 + 0.55 * k / max(nb - 1, 1)
+            tb = round(a0 + k * B, 4)
+            v = 0.4 if tb < charge else 0.65 + 0.35 * (tb - charge) / max(coil - charge, 1e-6)
             lub = I.subdrop(0.2, 92, 52, f'lub{k}') + I.kick(0.25, f'lubk{k}', 160, 60, 0.02, 0.05, 1.5, 0.15)[:ns(0.2)]
             dub = I.subdrop(0.16, 84, 50, f'dub{k}')
             self.pads.add(lub, tb, 0.85 * v, room=0.1)
             self.pads.add(dub, tb + 0.13, 0.55 * v, room=0.1)
-        self.pads.add(I.noise_riser(dur - 0.06, 220, 7000, 'riser0', q=1.4, shape=2.6), a0, 0.16, hall=0.15)
-        self.pads.add(I.tone_riser(dur * 0.65 - 0.06, D3, D5, 'triser0'), a0 + dur * 0.35, 0.10, hall=0.3)
+        # charge snap: a dark low hit, then the risers start
+        self.acc.add(I.braam([D1, D2], 0.5, 'braam_charge', bright=0.45, drv=2.2, decay=0.3, sub=0.3), charge, 0.35,
+                     hall=0.4)
+        self.acc.add(I.taiko(1.0, 'taiko_charge', 100, 48, 0.5), charge, 0.45, hall=0.3)
+        self.acc.add(I.subdrop(0.9, 70, 32, 'sub_charge'), charge, 0.35)
+        self.pads.add(I.noise_riser(drop - charge - 0.06, 220, 7000, 'riser0', q=1.4, shape=2.6), charge, 0.16,
+                      hall=0.15)
+        self.pads.add(I.tone_riser(drop - palm - 0.06, D3, D5, 'triser0'), palm, 0.10, hall=0.3)
         src = I.braam([D2, A2, D3], 0.6, 'swellsrc0', drv=2.0)
-        sw = I.reverse_swell(src, hall, 1.0)
+        sw = I.reverse_swell(src, hall, drop - coil + 0.3)
         self.acc.add_end(fades(sw, 0, 0.01), drop - BREATH, 0.42)
-        crs = I.crash(1.0, 'revcrash0')[:, ::-1]
+        crs = I.crash(0.8, 'revcrash0')[:, ::-1]
         self.acc.add_end(fades(crs, 0.3, 0.01), drop - BREATH, 0.55)
 
-        # ============================================================ 1.6 DROP: braam, kick, 808, cowbell riff
+        # ============================================================ DROP (bar A): braam, kick, 808, cowbell riff
         self.acc.add(I.braam([D1, D2, A2, D3, F3, A3], 1.3, 'braam_drop', bright=1.0, drv=3.2), drop, 0.62, hall=0.3)
         self.acc.add(I.crash(2.6, 'crash_drop'), drop, 0.55, hall=0.2)
         self.acc.add(I.subdrop(1.1, 82, 32, 'sub_drop'), drop, 0.5)
         self.acc.add(I.choir_stab([D3, A3, D4, F4], 'stab_drop'), drop, 0.30, hall=0.4)
-        kicks = {0: 1.0, 3: 0.8, 6: 0.9, 10: 1.0, 14: 0.95}
-        for s, v in kicks.items():
-            tk = round(h0 + s * S, 4)
-            self.kick(tk, v, big=(s == 0 or abs(tk - kick_in) < 1e-6), key=f'k1_{s}')
-        for s in (4, 12):
-            self.backbeat(round(h0 + s * S, 4), key=f'bb1_{s}')
-        self.hats(h0 + S, h0 + 12 * S, S, key='h1')
-        self.hats(h0 + 12 * S, h1, S / 2, gain=0.11, key='h1r', accent=(0.6, 0.35, 0.5, 0.4, 0.7, 0.45, 0.8, 0.6))
-        self.bass([dict(t=h0, dur=0.55, m=D1, slide_from=D2, slide=0.14),
-                   dict(t=h0 + 6 * S, dur=0.35, m=D1),
-                   dict(t=h0 + 10 * S, dur=0.27, m=D2, slide_from=D1, slide=0.05),
-                   dict(t=h0 + 13 * S, dur=0.1, m=C2),
-                   dict(t=h0 + 14 * S, dur=0.4, m=Eb1, slide_from=D2, slide=0.1)], h0, h1 + 0.25, key='808_1')
+        hA = drop
+        for s_, v in {0: 1.0, 3: 0.8, 6: 0.9, 8: 1.0}.items():
+            tk = round(hA + s_ * S, 4)
+            if tk < hold0:
+                self.kick(tk, v, big=(s_ == 0), key=f'k1_{s_}')
+        self.backbeat(round(hA + 4 * S, 4), key='bb1_4')
+        self.hats(hA + S, hold0, S, key='h1')
+        self.bass([dict(t=hA, dur=0.55, m=D1, slide_from=D2, slide=0.14),
+                   dict(t=hA + 6 * S, dur=0.2, m=D1),
+                   dict(t=dash, dur=hold0 - dash, m=D2, slide_from=D1, slide=0.05)], hA, hold0 + 0.05, key='808_1')
+        self.riff(hA, [(s_, m) for s_, m in ((0, D5), (3, D5), (6, F5), (8, Eb5), (10, D5)) if hA + s_ * S < hold0],
+                  key='cbA')
+        # the hold (plant -> wind-up): the beat stops, only a tense tritone pad; the wind-up sucks into the kick
+        self.pads.add(I.supersaw_pad([D3, Ab3], kick_in - hold0, 'hold_pad', cutoff=900, attack=0.08, release=0.05),
+                      hold0, 0.12, hall=0.4)
+        self.pads.add(I.choir([D3, A3], kick_in - hold0 - 0.03, 'hold_choir', 'u', attack=0.15, release=0.03), hold0,
+                      0.22, hall=0.4)
+        wsrc = I.braam([D2, A2, D3, A3], 0.4, 'swellsrc_k', drv=2.5)
+        self.acc.add_end(fades(I.reverse_swell(wsrc, hall, kick_in - windup + 0.15), 0, 0.01), kick_in - BREATH, 0.4)
+        self.acc.add_end(fades(I.crash(0.45, 'revcr_k')[:, ::-1], 0.15, 0.01), kick_in - BREATH, 0.3)
+
+        # ============================================================ KICK-IN (bar B): the music hits with the kick
+        hB = hA + BAR
+        for s_, v in {0: 1.0, 3: 0.8, 6: 0.9, 8: 1.0, 11: 0.85, 14: 0.9}.items():
+            tk = round(hB + s_ * S, 4)
+            self.kick(tk, v, big=abs(tk - kick_in) < 1e-6, key=f'k1b_{s_}')
+        for s_ in (4, 12):
+            self.backbeat(round(hB + s_ * S, 4), key=f'bb1b_{s_}')
+        self.hats(hB + S, build, S, key='h1b')
+        self.hats(build, dive, S / 2, gain=0.11, key='h1r', accent=(0.6, 0.35, 0.5, 0.4, 0.7, 0.45, 0.8, 0.6))
+        self.bass([dict(t=hB, dur=0.55, m=D1, slide_from=D2, slide=0.12),
+                   dict(t=hB + 6 * S, dur=0.2, m=D1),
+                   dict(t=hB + 8 * S, dur=0.27, m=D2, slide_from=D1, slide=0.05),
+                   dict(t=hB + 11 * S, dur=0.1, m=C2),
+                   dict(t=hB + 12 * S, dur=0.4, m=Eb1, slide_from=D2, slide=0.1)], hB, h1 + 0.25, key='808_1b')
         riffA = [(0, D5), (3, D5), (6, F5), (8, Eb5), (10, D5), (11, C5), (12, A4), (14, Bb4)]
-        self.riff(h0, riffA, key='cbA')
-        # kick-in accent (2.6): the music hits with the kick
+        self.riff(hB, riffA, key='cbA2')
         self.acc.add(I.braam([D2, A2, D3, A3], 0.42, 'braam_kickin', bright=0.9, drv=3.5, decay=0.25), kick_in, 0.5,
                      hall=0.3)
         self.acc.add(I.taiko(1.0, 'taiko_kickin', 130, 60), kick_in, 0.6, room=0.2, hall=0.2)
         self.acc.add(I.crash(1.6, 'crash_kickin', bright=0.9), kick_in, 0.4, hall=0.15)
-        # 3.0 - 3.4: build into the dive: snare roll, riser (the beat bus gets a high-pass sweep, see fx())
-        self.roll(close, inside, S / 2, 0.25, 1.0, 'roll_close', 200, 330, gain=0.42)
-        self.pads.add(I.noise_riser(inside - close, 500, 9000, 'riser_dive', q=1.2, shape=1.6), close, 0.30, hall=0.2)
-        self.pads.add(I.tone_riser(inside - close, A3, D5 + 5, 'triser_dive', cutoff=(800, 7000)), close, 0.14)
+        self.acc.add(I.crash(0.9, 'crash_close', bright=0.8), close, 0.22, hall=0.2)
+        # build into the dive: snare roll, riser (the beat bus gets a high-pass sweep, see fx())
+        self.roll(build, inside, S / 2, 0.25, 1.0, 'roll_close', 200, 330, gain=0.42)
+        self.pads.add(I.noise_riser(inside - build, 500, 9000, 'riser_dive', q=1.2, shape=1.6), build, 0.30, hall=0.2)
+        self.pads.add(I.tone_riser(inside - build, A3, D5 + 5, 'triser_dive', cutoff=(800, 7000)), build, 0.14)
 
-        # ============================================================ 3.4 INSIDE: alien pad, underwater beat
+        # ============================================================ INSIDE: alien pad, underwater beat
         self.pads.add(I.supersaw_pad([D3, A3, Eb4, Ab4], i1 - inside, 'alien0', cutoff=1500, attack=0.7, release=0.6,
                                      tremolo=0.3), inside, 0.24, void=0.8)
         self.pads.add(I.choir([D2, A2, D3], i1 - inside + 0.2, 'choir_in', 'u', attack=0.8, release=0.5), inside,
@@ -180,7 +216,7 @@ class Score:
                       i0 + 10 * S, 0.18, void=0.3)
         self.acc.add_end(fades(I.crash(0.6, 'revcr2')[:, ::-1], 0.2, 0.01), b0 - BREATH, 0.3)
 
-        # ============================================================ 4.8 BARRAGE: drums lock to the 8th-note hits
+        # ============================================================ BARRAGE: drums lock to the 8th-note hits
         bar_hits = [h for h in tl.HITS if b0 <= h['t'] < b1]
         for h in bar_hits:
             on_beat = abs(((h['t'] - b0) / B) - round((h['t'] - b0) / B)) < 1e-6
@@ -204,7 +240,7 @@ class Score:
                       b0, 0.26, void=0.6)
         self.pads.add(I.choir([Bb2, F3, D4], b1 - b0, 'choirB', 'o', attack=0.2, release=0.3), b0, 0.32, void=0.6)
 
-        # ============================================================ 6.4 FRENZY: 16th rolls, rising riff, aberration
+        # ============================================================ FRENZY: 16th rolls, rising riff, aberration
         for k in range(8):
             tk = round(f0 + k * 2 * S, 4)
             self.kick(tk, 1.0 if k % 2 == 0 else 0.72, key=f'k4_{k}', decay=0.11)
@@ -214,7 +250,7 @@ class Score:
             self.drum(I.snare(1.0, f'sn4_{k}', tone=180 + 90 * u, decay=0.06), h['t'], 0.16 + 0.26 * u ** 1.3,
                       0.35 * np.sin(k * 2.4), room=0.15, void=0.15)
         for s in (4, 12):
-            self.backbeat(round(f0 + s * S, 4), 0.6, key=f'bb4_{s}')
+            self.backbeat(round(f0 + s * S, 4), 0.6, key=f'bb4_{s}', tail=0.06, decay=0.06)   # tight: 16th hits follow
         self.hats(f0, f1, S / 2, gain=0.10, key='h4', accent=(1.0, 0.5, 0.7, 0.45))
         self.bass([dict(t=f0, dur=0.4, m=D1, slide_from=A1, slide=0.05),
                    dict(t=f0 + 4 * S, dur=0.4, m=Eb1, slide_from=D1, slide=0.1),
@@ -235,7 +271,7 @@ class Score:
         self.pads.add(I.tone_riser(gap0 - cracks, D4, D5 + 3, 'siren4', cutoff=(900, 8000)), cracks, 0.12, void=0.3)
         self.pads.add(I.noise_riser(gap0 - cracks, 600, 10000, 'riser4', q=1.3, shape=2.4), cracks, 0.16, void=0.2)
 
-        # ============================================================ 8.0 CLIMAX
+        # ============================================================ CLIMAX
         self.kick(c0, 1.0, big=True, key='k5_0')
         self.acc.add(I.crash(0.6, 'crash_ring', bright=0.8), c0, 0.25)
         self.roll(c0 + S / 2, gap0, S / 2, 0.3, 1.0, 'roll_ring', 220, 380, gain=0.38)
@@ -245,13 +281,13 @@ class Score:
         self.acc.add_end(suck, gap0, 0.5)
         self.pads.add(I.supersaw_pad([D3, A3, D4, F4], gap0 - c0, 'padD5', cutoff=3000, attack=0.25, release=0.01),
                       c0, 0.22)
-        # 8.40 MEGA: the biggest hit
+        # MEGA (after the gap): the biggest hit
         self.mega(gap1, 'm1', huge=True)
-        # 8.6 pickups into the launch
+        # pickups into the launch
         self.drum(I.snare(1.0, 'pk1', tone=230, decay=0.06), round(launch - 2 * S, 4), 0.22)
         self.drum(I.snare(1.0, 'pk2', tone=260, decay=0.06), round(launch - S, 4), 0.34)
         self.acc.add_end(fades(I.crash(0.5, 'revcr5')[:, ::-1], 0.25, 0.01), launch - BREATH, 0.35)
-        # 8.8 launch accent
+        # launch accent
         self.kick(launch, 1.0, big=True, key='k5_launch')
         self.backbeat(launch, 0.6, key='bb5_l')
         self.acc.add(I.braam([D2, A2, D3, A3], 0.5, 'braam_launch', bright=1.0, drv=3.5, decay=0.3), launch, 0.55,
@@ -267,18 +303,18 @@ class Score:
                    dict(t=above, dur=hammer - above, m=D2)], launch, hammer, key='808_6')
         self.riff(launch, [(0, D5), (1, D5), (2, F5), (3, Ab5), (4, A5), (5, Ab5), (6, F5), (7, Eb5)], key='cbL',
                   gain=0.4)
-        # 9.2 - 9.6 slow motion: the beat bus is tape-stopped in fx(); a choir rises over it
+        # slow motion (above -> hammer): the beat bus is tape-stopped in fx(); a choir rises over it
         ln = hammer - above
         nn = ns(ln + 0.06)
         u = np.clip(tvec(nn) / ln, 0, 1)
-        self.pads.add(I.choir([D3, A3, D4, F4, A4], ln - BREATH - 0.015, 'choir_rise', 'o', attack=ln * 0.8,
+        self.pads.add(I.choir([D3, A3, D4, F4, A4], ln - BREATH - 0.025, 'choir_rise', 'o', attack=ln * 0.8,
                               release=0.015, glide=5 * u ** 1.6, vowel2='a', morph=u), above, 0.55, hall=0.5)
-        self.pads.add(fades(I.tone_riser(ln - BREATH, A3, D5, 'triser_above', cutoff=(500, 6000)), 0, 0.01), above,
+        self.pads.add(fades(I.tone_riser(ln - BREATH - 0.01, A3, D5, 'triser_above', cutoff=(500, 6000)), 0, 0.01), above,
                       0.10, hall=0.3)
-        # 9.6 MEGA hammer
+        # MEGA hammer
         self.mega(hammer, 'm2', huge=False)
 
-        # ============================================================ 9.6 - 14.4 FINAL / AFTER: epic resolving outro
+        # ============================================================ FINAL / AFTER: epic resolving outro
         self.pads.add(fades(I.drone([D1, A1, D2], land - crater + 0.4, 'drone_final', cutoff=(200, 500)), 0.15, 0.3),
                       crater, 0.30,
                       hall=0.4)
@@ -296,7 +332,7 @@ class Score:
         for k, (dt, f) in enumerate(((0.4, 150), (0.6, 165), (0.7, 180))):
             self.acc.add(I.taiko(1.0, f'tom_{k}', f, f * 0.55, 0.3), land + half + dt, 0.28 + 0.08 * k, hall=0.3)
         self.roll(title - 0.3, title, S / 2, 0.15, 0.7, 'roll_title', 220, 300, gain=0.3)
-        # 12.0 title: D minor resolution, held to the end
+        # title: D minor resolution, held to the end
         hold = fade_out - title
         self.acc.add(I.braam([D1, D2, A2, D3, F3, A3, D4], 1.6, 'braam_title', bright=1.05, drv=3.0, decay=0.7,
                              sustain=0.35, release=0.8), title, 0.55, hall=0.45)
@@ -339,7 +375,8 @@ class Score:
     def fx(self):
         """Beat-bus processing: HP sweep into the dive, underwater LP opening up, aberration, tape stop."""
         tl = self.tl
-        close, inside = tl.ev('close'), tl.ev('inside')
+        dive, inside = tl.ev('dive'), tl.ev('inside')
+        close = dive - tl.BEAT                                  # start of the build into the dive
         i0, i1 = tl.sec('inside')
         cracks = tl.ev('cracks')
         gap0, _ = tl.gap()

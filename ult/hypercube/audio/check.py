@@ -240,8 +240,12 @@ def plot(y16, music, sfx, tl, res, duck_db, path):
             fontsize=9, color=muted)
 
     # 5. zooms
-    zooms = [(2.45, 2.80, 'kick-in 2.60 (heavy)'), (6.35, 6.95, 'frenzy 16ths'), (8.20, 8.70, 'gap → MEGA 8.40'),
-             (9.50, 10.05, 'hammer 9.60 / exit / crater')]
+    h1 = next(h for h in tl.HITS if h['kind'] in ('heavy', 'mega'))
+    f0 = tl.sec('frenzy')[0]
+    g0, g1 = tl.gap()
+    hm, cr = tl.ev('hammer'), tl.ev('crater')
+    zooms = [(h1['t'] - 0.15, h1['t'] + 0.2, f'first {h1["kind"]} {h1["t"]:.2f}'), (f0 - 0.05, f0 + 0.55, 'frenzy 16ths'),
+             (g0 - 0.1, g1 + 0.3, f'gap → MEGA {g1:.2f}'), (hm - 0.1, cr + 0.4, f'hammer {hm:.2f} / exit / crater')]
     for j, (lo, hi, name) in enumerate(zooms):
         ax = fig.add_subplot(gs[4, j])
         a, b = ns(lo), ns(hi)

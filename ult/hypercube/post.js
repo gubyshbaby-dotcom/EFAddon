@@ -10,6 +10,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { SPACE, SHOTS, EVENTS, spaceAt } from './timeline.js';
 
 const NRIP = 4;
 export const FX_SHADER = {
@@ -131,19 +132,28 @@ export function createPost(renderer, scene, camera, w, h) {
   return { composer, bloom, fx };
 }
 
-// ---- sectional look (pure functions of t) ----
+// ---- sectional look (pure functions of t; every time comes from timeline.js) ----
 const smooth = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+const EVT = Object.fromEntries(EVENTS.map(e => [e.id, e.t]));
+const shotStart = (t) => (SHOTS.find(s => s.t0 <= t && t < s.t1) || SHOTS[SHOTS.length - 1]).t0;
+const LB = {
+  inside: SPACE[1].t0,                 // the dive cut into hyperspace
+  climax: shotStart(EVT.ring),         // the wide ring-of-clones shot
+  out: SPACE[2].t0,                    // the cut back to the world
+  after: shotStart(EVT.rise),          // the aftermath orbit (title)
+};
 /** Letterbox amount (1 = bars of 12 % of the height): steps only on cuts; opens wider for the climax. */
 export function letterboxAt(t) {
-  if (t < 3.4) return 0.8;          // world opening
-  if (t < 8.0) return 0.62;         // inside
-  if (t < 9.65) return 0.32;        // climax: the frame opens up
-  if (t < 11.2) return 0.5;         // meteor, crater, landing
-  return 0.85;                      // aftermath + title: cinematic
+  if (t < LB.inside) return 0.8;       // world opening
+  if (t < LB.climax) return 0.62;      // inside
+  if (t < LB.out) return 0.32;         // climax: the frame opens up
+  if (t < LB.after) return 0.5;        // meteor, crater, landing
+  return 0.85;                         // aftermath + title: cinematic
 }
+const FADE_OUT = EVT.fade_out;         // picture is black from here (fade over the 0.5 s before)
 export function fadeAt(t) {
   if (t < 0.15) return 1 - smooth(t / 0.15);
-  if (t > 13.9) return smooth((t - 13.9) / 0.5);
+  if (t > FADE_OUT - 0.5) return smooth((t - (FADE_OUT - 0.5)) / 0.5);
   return 0;
 }
 
@@ -151,7 +161,7 @@ export function fadeAt(t) {
  *  ripples: [{c:[u,v], r (screen heights), s (strength)}], heat: [u, v, radius, amount], shake: [du, dv, zoom],
  *  glitch 0..1 (+ glitchSeed), monoThreshold: [lo, hi] linear luminance for impact frames. */
 export function basePost(t) {
-  const inside = t >= 3.4 && t < 9.65;
+  const inside = spaceAt(t) === 'inside';
   return {
     bloom: { strength: inside ? 0.7 : 0.5, radius: 0.45, threshold: 0.85 },
     chroma: 0, radial: 0, radialCenter: [0.5, 0.5], invert: 0, mono: 0, lines: 0, monoThreshold: [0.35, 0.5],

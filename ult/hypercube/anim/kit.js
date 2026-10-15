@@ -32,6 +32,16 @@ const CONTROLS = ['life', 'shake', 'calmR', 'calmL', 'calmH', 'calmLegs', 'look'
 const CTRL_DEFAULT = { life: 1, shake: 0, calmR: 1, calmL: 1, calmH: 1, calmLegs: 1, lookW: 1 };
 
 export const K = (t, p, e = 'smooth', ez = {}) => ({ t: +(+t).toFixed(5), p, e, ez });
+export const F = 1 / 60;
+/**
+ * The pack's rhythm (hold → snap → held follow-through) as keys: HOLD pose `from` until t − n frames (slow drift into it
+ * with 'sineInOut' from the previous key), SNAP in n frames to `over` at t, SETTLE to `to` over `settle` s (quadOut).
+ */
+export function snap(t, from, over, to = null, { n = 2, settle = 0.1, ease = 'linear', settleEase = 'quadOut', ez = {} } = {}) {
+  const out = [K(t - n * F, from, 'sineInOut'), K(t, over, ease, ez)];
+  if (to) out.push(K(t + settle, to, settleEase));
+  return out;
+}
 export const lerp = (a, b, w) => Array.isArray(a) ? a.map((v, i) => v + (b[i] - v) * w) : a + (b - a) * w;
 export const add = (a, b) => a.map((v, i) => v + (b[i] || 0));
 
@@ -68,12 +78,13 @@ const LIFE = {
   legR: [[0.9, 0.35], [0.8, 0.3], [0.8, 0.4]], 'legR.pos': [[0.12, 0.33], [0.12, 0.41], [0.12, 0.3]],
   legL: [[0.9, 0.31], [0.8, 0.38], [0.8, 0.36]], 'legL.pos': [[0.12, 0.37], [0.12, 0.29], [0.12, 0.35]],
 };
+// tremble (charge, strain): small and slowish (6–9 Hz) so a trembling hold still reads (and measures) as a HOLD
 const SHAKE = {
-  torso: [[0.7, 13], [0.6, 11], [0.7, 14]], 'torso.pos': [[0.18, 12], [0.22, 15], [0.18, 13]],
-  head: [[1.0, 15], [0.9, 12], [0.8, 16]],
-  armR: [[1.8, 14], [1.4, 12], [1.6, 17]], 'armR.pos': [[0.2, 13], [0.2, 16], [0.2, 11]],
-  armL: [[1.8, 12], [1.4, 15], [1.6, 13]], 'armL.pos': [[0.2, 15], [0.2, 12], [0.2, 14]],
-  legR: [[0.4, 9], [0.3, 10], [0.4, 11]], legL: [[0.4, 10], [0.3, 9], [0.4, 12]],
+  torso: [[0.6, 7], [0.5, 6], [0.6, 8]], 'torso.pos': [[0.15, 7], [0.18, 8.5], [0.15, 6.5]],
+  head: [[0.8, 8], [0.7, 6.5], [0.6, 9]],
+  armR: [[1.2, 7.5], [1.0, 6], [1.1, 8.5]], 'armR.pos': [[0.15, 7], [0.15, 8], [0.15, 6]],
+  armL: [[1.2, 6.5], [1.0, 8], [1.1, 7]], 'armL.pos': [[0.15, 8], [0.15, 6.5], [0.15, 7.5]],
+  legR: [[0.3, 5], [0.2, 6], [0.3, 6.5]], legL: [[0.3, 6], [0.2, 5], [0.3, 7]],
 };
 const calmOf = n => n.startsWith('armR') ? 'calmR' : n.startsWith('armL') ? 'calmL' : n.startsWith('head') ? 'calmH' : n.startsWith('leg') ? 'calmLegs' : null;
 

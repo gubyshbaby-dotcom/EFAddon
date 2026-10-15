@@ -10,24 +10,27 @@ import {
   Tess, Beams, Sprites, SHARED, frameShared, noiseTex, effTime, lastHits, KIND_AMP, COL, hash, clamp, lerp, smooth, ramp,
   expoOut, beatPhase,
 } from './tesseract.js';
-import { INSIDE, HITS, BEAT } from '../timeline.js';
+import { INSIDE, HITS, BEAT, EVENTS } from '../timeline.js';
 
-const T_IN = 3.4, T_OUT = 9.65, T_CRACK = 7.2, T_RING = 8.0, T_GAP = 8.3, T_MEGA = 8.4, T_SLOW = 9.2, T_HAM = 9.6;
+// All times from timeline EVENTS (v2: inside 6.60–12.85).
+const EV = Object.fromEntries(EVENTS.map(e => [e.id, e.t]));
+const T_IN = EV.inside ?? 6.6, T_OUT = EV.exit ?? 12.85, T_CLONES = EV.clones ?? 9.6, T_CRACK = EV.cracks ?? 10.4, T_RING = EV.ring ?? 11.2;
+const T_GAP = EV.gap ?? 11.5, T_MEGA = EV.mega1 ?? 11.6, T_SLOW = EV.above ?? 12.4, T_HAM = EV.hammer ?? 12.8;
 const I = new THREE.Vector3(...INSIDE);
 
 // lattice clock: d(theta)/dt — integrated once into a table (pure function of t)
 function rate(t) {
   let r = 1;
-  r *= lerp(1, 2.8, smooth(6.3, 6.5, t) * (1 - smooth(7.9, 8.05, t)));   // bar 5: faster
+  r *= lerp(1, 2.8, smooth(T_CLONES - 0.1, T_CLONES + 0.1, t) * (1 - smooth(T_RING - 0.1, T_RING + 0.05, t)));   // frenzy bar: faster
   r *= lerp(1, 0.45, smooth(T_RING, T_GAP, t));                            // ring: focus, slow
   if (t >= T_GAP && t < T_MEGA + 0.2) r *= 0.04;                           // silence gap + mega freeze: hold
-  r *= lerp(1, 1.6, smooth(8.6, 8.7, t) * (1 - smooth(9.15, 9.25, t)));
+  r *= lerp(1, 1.6, smooth(T_MEGA + 0.2, T_MEGA + 0.3, t) * (1 - smooth(T_SLOW - 0.05, T_SLOW + 0.05, t)));
   r *= lerp(1, 0.3, smooth(T_SLOW, T_SLOW + 0.05, t));                     // slow motion
   for (const h of HITS) if (h.stop && t >= h.t && t < h.t + h.stop) r *= 0.12;
   return r;
 }
-const CLK0 = 3.0, CLKDT = 1 / 600, CLK = [];
-{ let a = 0; for (let t = CLK0; t <= 10.2; t += CLKDT) { CLK.push(a); a += rate(t) * CLKDT; } }
+const CLK0 = T_IN - 0.4, CLKDT = 1 / 600, CLK = [];
+{ let a = 0; for (let t = CLK0; t <= T_OUT + 0.6; t += CLKDT) { CLK.push(a); a += rate(t) * CLKDT; } }
 function clock(t) {
   const x = (t - CLK0) / CLKDT;
   if (x <= 0) return x * CLKDT;
@@ -158,7 +161,9 @@ export function create(ctx) {
       return;
     }
     const te = effTime(t);
+    // victim chest, clamped to the set (robust while the animation is re-keyed: the set never drifts away from INSIDE)
     const vch = f.bone('victim', 'chest');
+    { const d = vch.distanceTo(I); if (!(d <= 3)) vch.sub(I).multiplyScalar(isFinite(d) && d > 0 ? 3 / d : 0).add(I); }
     const cam = f.camera;
     _v.copy(vch).project(cam);
     H.focusScreen = [clamp((_v.x + 1) / 2, 0.15, 0.85), clamp((_v.y + 1) / 2, 0.15, 0.85)];
@@ -167,7 +172,7 @@ export function create(ctx) {
     _f.subVectors(_c, cam.position).normalize();                 // camera → subject
     _r.crossVectors(_f, _u).normalize();                          // camera right
     const hp = flashOf(t, 14);
-    const dark = smooth(T_RING, T_GAP, t) * (1 - smooth(8.7, 8.95, t));   // stays dark through B's shockwave
+    const dark = smooth(T_RING, T_GAP, t) * (1 - smooth(T_MEGA + 0.3, T_MEGA + 0.55, t));   // stays dark through B's shockwave
     const mega = t >= T_MEGA ? Math.exp(-Math.max(0, te - effTime(T_MEGA)) * 6) : 0;
     lights.sun.color.copy(KEYC);
     lights.sun.intensity = (1.7 + 0.5 * hp) * (1 - 0.45 * dark) + 3 * mega;
@@ -278,7 +283,7 @@ export function post(t, p, f) {
   p.chroma = Math.max(p.chroma, 0.6 * e);
   p.exposure *= 1 + 0.25 * e;
   // cracks → aberration ramps (plus a kick on every hit)
-  const ck = smooth(T_CRACK, 8.0, t);
+  const ck = smooth(T_CRACK, T_CRACK + 0.8, t);
   p.chroma = Math.max(p.chroma, ck * (0.14 + 0.16 * Math.min(1, flashOf(t, 12))));
   // ring charge: darker, tighter
   const dk = smooth(T_RING, T_GAP, t) * (1 - smooth(T_MEGA, T_MEGA + 0.25, t));
