@@ -17,10 +17,15 @@
 //   hipSocket(side, torso, torsoPos)    → the hip point under a torso pose (RootJoint rotation about its centre)
 //   apply(tracks, side, t, res, ease)   → push the result as keys into 'legR'/'legL' and 'legR.pos'/'legL.pos'
 //
-// Segment lengths: THIGH 6 px, SHIN 6 px (hip → knee → sole). The block bottom is the sole.
+// Segment lengths: thigh PROP.thigh (default 3.5 px), shin 12 − thigh (hip → knee → sole). The block bottom is the sole.
+// Every function takes opts.thighLen / opts.upperLen to override per call.
 import * as THREE from 'three';
 
-export const THIGH = 6, SHIN = 6, BLOCK = 12, D2R = Math.PI / 180, R2D = 180 / Math.PI;
+export const BLOCK = 12, D2R = Math.PI / 180, R2D = 180 / Math.PI;
+// How far the block's top floats ≈ 2·L·sin(flex/2), L = the virtual thigh (upper arm) length. 6 px (half the leg) was
+// R6-like but too much for Minecraft's slimmer limbs (the author: "too far"); 3.5 px gives ≈ 3–5 px like the pack's mean.
+export const PROP = { thigh: 3.5, upper: 2.5 };
+export function setProportions(p) { Object.assign(PROP, p); }
 const REST = { R: [1.9, 12, 0], L: [-1.9, 12, 0] };          // hip sockets in the root frame (px), rig.js BODY_HIP
 const v3 = (a) => new THREE.Vector3(a[0], a[1], -a[2]);       // z forward → model -Z
 const arr = (v) => [v.x, v.y, -v.z];
@@ -41,7 +46,8 @@ function blockFromShin(side, qShin, foot) {
   return { ang: angFromQuat(side, qShin), pos: arr(top.sub(rest)) };
 }
 
-export function vleg(side, hip, thigh, knee) {
+export function vleg(side, hip, thigh, knee, { thighLen = PROP.thigh } = {}) {
+  const THIGH = thighLen, SHIN = BLOCK - thighLen;
   const qT = quatFromAng(side, thigh);
   const H = v3(hip);
   const K = H.clone().add(new THREE.Vector3(0, -THIGH, 0).applyQuaternion(qT));
@@ -52,14 +58,15 @@ export function vleg(side, hip, thigh, knee) {
 }
 
 export function vlegIK(side, hip, foot, opts = {}) {
+  const THIGH = opts.thighLen ?? PROP.thigh, SHIN = BLOCK - THIGH;
   const H = v3(hip), F = v3(foot);
-  const d = F.clone().sub(H), len = Math.min(d.length(), THIGH + SHIN - 1e-4);
+  const d = F.clone().sub(H), len = Math.max(Math.abs(THIGH - SHIN) + 1e-3, Math.min(d.length(), THIGH + SHIN - 1e-4));
   const dir = d.clone().normalize();
   // knee bend direction: perpendicular to hip→foot, toward opts.knee (default forward, slightly outward)
   const kd = v3(opts.knee || [side === 'R' ? 0.15 : -0.15, 0, 1]);
   const perp = kd.clone().sub(dir.clone().multiplyScalar(kd.dot(dir))).normalize();
-  const a = Math.acos(Math.min(1, len / (THIGH + SHIN)));      // equal segments: the knee leaves the line by this angle
-  const K = H.clone().add(dir.clone().multiplyScalar(len / 2)).add(perp.clone().multiplyScalar(Math.sin(a) * THIGH));
+  const cosA = (THIGH * THIGH + len * len - SHIN * SHIN) / (2 * THIGH * len), A = Math.acos(Math.max(-1, Math.min(1, cosA)));
+  const K = H.clone().add(dir.clone().multiplyScalar(Math.cos(A) * THIGH)).add(perp.clone().multiplyScalar(Math.sin(A) * THIGH));
   const Fp = H.clone().add(dir.clone().multiplyScalar(len));
   // shin orientation: block -Y along knee→foot, toes (-Z) toward the side the knee points to
   const down = Fp.clone().sub(K).normalize();
@@ -87,17 +94,18 @@ export function apply(tracks, side, t, res, ease = 'linear') {
 // ---- arms: block = FOREARM, fist end at the fist; its top floats where the elbow is (behind/below the shoulder on a
 // guard, out to the side on a hook, back behind the body on a wind-up), at the shoulder only when the arm is straight.
 // Arms hang from the torso, so everything here is in the TORSO frame (px from the torso centre, z forward):
-// shoulder sockets (±5, 4) px (slim 3.5). Virtual upper arm 4 px + forearm 6 px = the block's pivot→fist end (10 px),
-// so a straight arm sits exactly in its socket.
-export const UPPER = 4, FORE = 6;
+// shoulder sockets (±5, 4) px (slim 3.5). Virtual upper arm PROP.upper (default 2.5 px) + forearm = the block's
+// pivot→fist end (10 px), so a straight arm sits exactly in its socket.
 const ARM_REST = slim => ({ R: [5, slim ? 3.5 : 4, 0], L: [-5, slim ? 3.5 : 4, 0] });
+const ARM = 10; // pivot → fist end of the block
 function armBlock(side, qF, fist, slim) {
-  const pivot = fist.clone().sub(new THREE.Vector3(0, -(UPPER + FORE), 0).applyQuaternion(qF));
+  const pivot = fist.clone().sub(new THREE.Vector3(0, -ARM, 0).applyQuaternion(qF));
   return { ang: angFromQuat(side, qF), pos: arr(pivot.sub(v3(ARM_REST(slim)[side]))) };
 }
 /** FK: upper arm [pitch, yaw, roll] (rig conventions: pitch + = forward/up, roll + = out to the side) + elbow flexion
  *  (deg, + = forearm comes forward/up like a real elbow) → { ang, pos, elbow, fist } for 'armX' / 'armX.pos'. */
-export function varm(side, upper, elbow, { slim = false, shoulder } = {}) {
+export function varm(side, upper, elbow, { slim = false, shoulder, upperLen = PROP.upper } = {}) {
+  const UPPER = upperLen, FORE = ARM - upperLen;
   const qU = quatFromAng(side, upper);
   const S = v3(shoulder || ARM_REST(slim)[side]);
   const E = S.clone().add(new THREE.Vector3(0, -UPPER, 0).applyQuaternion(qU));
@@ -106,7 +114,8 @@ export function varm(side, upper, elbow, { slim = false, shoulder } = {}) {
   return { ...armBlock(side, qF, W, slim), elbow: arr(E), fist: arr(W) };
 }
 /** IK: put the fist end at `fist` (torso frame, px); the elbow bends toward opts.elbow (default down, back and out). */
-export function varmIK(side, fist, { slim = false, shoulder, elbow: ed, twist = 0 } = {}) {
+export function varmIK(side, fist, { slim = false, shoulder, elbow: ed, twist = 0, upperLen = PROP.upper } = {}) {
+  const UPPER = upperLen, FORE = ARM - upperLen;
   const S = v3(shoulder || ARM_REST(slim)[side]), W0 = v3(fist);
   const d = W0.clone().sub(S), len = Math.min(d.length(), UPPER + FORE - 1e-4), dir = d.clone().normalize();
   const want = v3(ed || [side === 'R' ? 0.6 : -0.6, -1, -0.5]);
