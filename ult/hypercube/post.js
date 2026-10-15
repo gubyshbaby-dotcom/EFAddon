@@ -176,7 +176,8 @@ export function applyPost(post, p, t) {
   post.bloom.strength = p.bloom.strength; post.bloom.radius = p.bloom.radius; post.bloom.threshold = p.bloom.threshold;
   const u = post.fx.uniforms;
   u.uTime.value = t;
-  u.uChroma.value = p.chroma; u.uRadial.value = p.radial; u.uRadialCenter.value.set(p.radialCenter[0], p.radialCenter[1]);
+  u.uChroma.value = p.chroma; u.uRadial.value = p.radial; // clamp to the frame: an off-screen centre (contact point out of shot) would inflate every module's chroma
+  u.uRadialCenter.value.set(Math.min(1, Math.max(0, p.radialCenter[0])), Math.min(1, Math.max(0, p.radialCenter[1])));
   u.uInvert.value = p.invert; u.uMono.value = p.mono; u.uLines.value = p.lines; u.uContrast.value = p.contrast;
   const mt = p.monoThreshold || [0.35, 0.5]; u.uMonoTh.value.set(mt[0], mt[1]);
   u.uSaturation.value = p.saturation; u.uTint.value.set(...p.tint); u.uFlash.value = p.flash; u.uFlashColor.value.set(...p.flashColor);

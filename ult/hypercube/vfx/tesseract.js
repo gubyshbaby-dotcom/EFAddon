@@ -1179,7 +1179,6 @@ export function create(ctx) {
 
 export function post(t, p, f) {
   if (!S || DBG.includes('nopostA')) return p;
-  if (DBG.includes('logp')) console.log('[vfxA] post in ' + JSON.stringify(p));
   const sc = S.cubeScreen || [0.5, 0.5];
   const space = f.space;
   if (space === 'world' && t < T_IN) {
@@ -1226,6 +1225,5 @@ export function post(t, p, f) {
       p.bloom.strength = Math.max(p.bloom.strength, 0.55 + 0.2 * Math.exp(-a * 10));
     }
   }
-  if (DBG.includes('logp')) console.log('[vfxA] post out ' + JSON.stringify(p));
   return p;
 }

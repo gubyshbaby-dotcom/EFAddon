@@ -5,5 +5,5 @@
 export default {
   // rear-leg push kick: the right sole lands in her belly (contact frame exact, solved in anim/user.js); she flies back
   // and up into the cube face (WORLD.cube, −Z)
-  '2.60': { id: 'user', limb: 'footR', at: 'chest', dir: [-0.05, 0.3, -1] },
+  '4.80': { id: 'user', limb: 'footR', at: 'chest', dir: [-0.05, 0.3, -1] },
 };

@@ -49,9 +49,12 @@ def thump(f0, f1, tau, key, drv=1.8):
     t = tvec(n)
     f = f1 + (f0 - f1) * np.exp(-t / 0.022)
     ph = cycles(f)
-    y = np.sin(TWO_PI * ph) * np.exp(-t / tau) + 0.3 * np.sin(2 * TWO_PI * ph) * np.exp(-t / (tau * 0.45))
+    osc = np.sin(TWO_PI * ph) + 0.3 * np.sin(2 * TWO_PI * ph) * np.exp(-t / (tau * 0.45))
+    # saturate the waveform, THEN apply the decay: tanh after the envelope would flatten the decay and smear the
+    # body into the next hit
+    y = drive(osc * 1.2, drv) * np.exp(-t / tau)
     y[:ns(0.0004)] *= np.linspace(0.3, 1, ns(0.0004))
-    return fades(drive(y * 1.2, drv), 0, 0.01)
+    return fades(y, 0, 0.01)
 
 
 def crunch(tau, key, fc, grit=0.025):
@@ -513,16 +516,16 @@ class Sfx:
         drop = E('throw')
         # --- charge snap: impact into the stance, ground cracks, aura burst (the hum starts here too)
         tc = E('charge')
-        self.add(click('chc', 0.9), tc, 0.7)
-        self.add(thump(135, 48, 0.12, 'chth', 2.2), tc, 0.8, room=0.2)
-        self.add(crunch(0.06, 'chk', 1300), tc, 0.6, room=0.2, hall=0.1)
+        self.add(click('chc', 0.9), tc, 0.45)
+        self.add(thump(135, 48, 0.12, 'chth', 2.2), tc, 0.55, room=0.2)
+        self.add(crunch(0.06, 'chk', 1300), tc, 0.4, room=0.2, hall=0.1)
         self.add(debris(0.7, 'chdeb', 45, 900, 4500, 0.25, hiss=0.3), tc + 0.04, 0.18, room=0.2)
         n = ns(0.6)
         t = tvec(n)
         fc = 600 * (4000 / 600) ** np.clip(t / 0.25, 0, 1)
         aura = tvf(np.vstack([noise(n, 'aur0'), noise(n, 'aur1')]), 'bp', fc, 1.0, 32) * np.minimum(t / 0.01, 1) * \
             np.exp(-t / 0.18)
-        self.add(aura, tc, 0.35, hall=0.3)
+        self.add(aura, tc, 0.25, hall=0.3)
         self.duck_events.append((tc, 4.0, 0.25, 0))
         # --- palm snaps open: a flick and a little crackle
         tp = E('palm_open')

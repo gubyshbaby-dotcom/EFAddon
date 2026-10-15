@@ -129,10 +129,10 @@ class Score:
             self.pads.add(lub, tb, 0.85 * v, room=0.1)
             self.pads.add(dub, tb + 0.13, 0.55 * v, room=0.1)
         # charge snap: a dark low hit, then the risers start
-        self.acc.add(I.braam([D1, D2], 0.5, 'braam_charge', bright=0.45, drv=2.2, decay=0.3, sub=0.3), charge, 0.35,
+        self.acc.add(I.braam([D1, D2], 0.5, 'braam_charge', bright=0.45, drv=2.2, decay=0.3, sub=0.3), charge, 0.22,
                      hall=0.4)
-        self.acc.add(I.taiko(1.0, 'taiko_charge', 100, 48, 0.5), charge, 0.45, hall=0.3)
-        self.acc.add(I.subdrop(0.9, 70, 32, 'sub_charge'), charge, 0.35)
+        self.acc.add(I.taiko(1.0, 'taiko_charge', 100, 48, 0.5), charge, 0.3, hall=0.3)
+        self.acc.add(I.subdrop(0.9, 70, 32, 'sub_charge'), charge, 0.25)
         self.pads.add(I.noise_riser(drop - charge - 0.06, 220, 7000, 'riser0', q=1.4, shape=2.6), charge, 0.16,
                       hall=0.15)
         self.pads.add(I.tone_riser(drop - palm - 0.06, D3, D5, 'triser0'), palm, 0.10, hall=0.3)
