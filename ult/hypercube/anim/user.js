@@ -102,6 +102,22 @@ const WATCH = { torso: [4, 14, 4], tp: [0.2, -2.6, 0.6], head: [-6, 0, 14], aL: 
 const STAND = { torso: [-2, 4, -3], tp: [0.2, -1.2, 0.2], head: [-12, 0, -4], aL: aim('armL', [0.5, -0.85, 0.05], 0), aLp: [-1.0, 0.6, 0.2],
   aR: aim('armR', [0.5, -0.85, 0.1], 10), aRp: [1.0, 0.4, 0.4], lR: [8, -12, 10], lRp: [0.6, 1.0, 0.6], lL: [-6, 4, 9], lLp: [-0.6, 0.8, -0.4] };
 
+// carries: the snap keeps going 2–3 frames past the pose, then settles back (pack-style fling → stop)
+const CHARGE_FLEX = { ...CHARGE_OVER, torso: [48, 12, -7], tp: [0.2, -8.2, 2.8], head: [30, 0, 0],
+  aR: aim('armR', [0.95, -0.1, 0.3], 30), aRp: [1.2, 3.8, 0.4], aL: aim('armL', [0.95, -0.05, -0.2], 30), aLp: [-1.2, 3.6, -1.2] };
+const PALM_OVER2 = { ...PALM_OVER, torso: [20, 22, 6], tp: [0.6, -2.8, 1.6], head: [4, 0, 4], aR: aim('armR', [-0.32, 0.3, 1], 90), aRp: [-0.6, 2.6, 3.8],
+  aL: [6, -22, 56], aLp: [-1.4, 0.8, -3.2] };
+const THROW_CARRY = { ...THROW_OVER, torso: [42, 42, -11], tp: [0.2, -5.8, 6.2], head: [-2, 0, 0], aR: aim('armR', [-0.1, 0.0, 1], 40), aRp: [0, 1.2, 9.6],
+  aL: [-66, -14, 60], aLp: [-1.8, 1.6, -4.4], lL: [52, 12, 12], lLp: [-1.2, 3.4, 5.0] };
+// dash strides in the air: legs scissor, arms pump against them
+const DASH_B = { ...DASH, torso: [62, -4, 2], lR: [-34, -2, 6], lRp: [0.4, 1.8, 5.0], lL: [-80, -2, 8], lLp: [-1.0, -1.4, -1.2],
+  aR: aim('armR', [0.2, -0.2, 1], 0), aRp: [0.6, 1.6, 2.4], aL: aim('armL', [0.35, -0.85, -0.4], 0), aLp: [-0.6, 1.0, -2.6] };
+const DASH_C = { ...DASH, torso: [64, 4, 2], lR: [-80, -2, 6], lRp: [0.4, -1.8, -1.4], lL: [-30, -2, 8], lLp: [-1.0, 2.2, 5.4],
+  aR: aim('armR', [0.35, -0.85, -0.45], 0), aRp: [0.6, 1.0, -2.8], aL: aim('armL', [-0.2, 0.15, 1], 25), aLp: [0.8, 2.4, 3.8] };
+const FOLLOW_CARRY = { ...FOLLOW, torso: [-54, 34, -12], tp: [0, -2.2, -5.2], head: [38, 0, 6], lR: [128, -2, 6], lRp: [0, 5.6, 7.2],
+  aL: aim('armL', [0.85, 0.75, -0.1], 0), aLp: [-1.2, 2.8, -1.2], aR: aim('armR', [0.5, 0.85, -0.2], 0), aRp: [1.2, 3.0, -1.0] };
+const DOWN_CARRY = { ...DOWN_OVER, torso: [30, 16, -2], tp: [0, -6.6, 2.6], head: [14, 0, 0], aL: aim('armL', [0.9, -0.2, -0.4], 0), aR: aim('armR', [0.95, 0.05, 0.15], 0) };
+
 const keys = [
   // ---- 0.00–1.00 idle: one long breathing hold; the head turns slowly from "bored" to her ----
   K(0.00, { pos: [0, 0, 0], rot: [0, 0, 0], pivot: 0.75, plant: 1, ...IDLE, look: AWAY, lookW: 0.7, life: 0.8, shake: 0,
@@ -109,23 +125,30 @@ const keys = [
   K(0.45, { look: AWAY }, 'linear'),
   K(0.95, { look: vHead, ...IDLE, torso: [6, -10, 3] }, 'sineInOut'),
   // ---- 1.00–1.17 inhale (slow), 1.20 SNAP down into the charge stance, settle, hold trembling, sinking ----
-  ...snap(1.20, { ...INHALE, lookW: 0.6 }, { ...CHARGE_OVER, shake: 0.3 }, { ...CHARGE, shake: 0.8 }, { settle: 0.12 }),
+  ...snap(1.20, { ...INHALE, lookW: 0.6 }, { ...CHARGE_OVER, shake: 0.3 }),
+  K(1.25, { ...CHARGE_FLEX }, 'linear'),
+  K(1.42, { ...CHARGE, shake: 0.8 }, 'quadOut'),
   K(1.95, { ...CHARGE_LOW, shake: 1.0 }, 'sineInOut'),
   // ---- 2.00 SNAP the palm open, palm up at chest height (eyes on it); hold while the seed forms; eyes go to her ----
-  ...snap(2.00, { ...CHARGE_LOW, shake: 1.0, look: vHead }, { ...PALM_OVER, look: PALM, shake: 0.2, calmR: 0.15 }, { ...PALM_UP, shake: 0.3 },
+  ...snap(2.00, { ...CHARGE_LOW, shake: 1.0, look: vHead }, { ...PALM_OVER, look: PALM, shake: 0.2, calmR: 0.15 }, null,
     { ez: { look: 'linear', shake: 'linear', calmR: 'linear' } }),
+  K(2.05, { ...PALM_OVER2 }, 'linear'),
+  K(2.2, { ...PALM_UP, shake: 0.3 }, 'quadOut'),
   K(2.45, { look: PALM, head: [8, 0, -6] }, 'sineInOut'),
   K(2.75, { ...PALM_LATE, look: vHead }, 'sineInOut'),
   // ---- 2.80–3.05 the coil: slow wind-up, then STILL (the body loads, the palm stays up, drawn to the chest) ----
   K(3.05, { ...COIL, shake: 0.6, calmR: 0.4 }, 'sineInOut'),
   // ---- 3.20 THROW on the DROP: explosive palm thrust, lunge stomp; hold the follow-through (slow sink) ----
-  ...snap(3.20, { pos: [0, 0, 0], ...COIL_LATE, shake: 0.6 }, { pos: [0, 0, -0.25], ...THROW_OVER, shake: 0, calmR: 1 }, THROW,
-    { ease: 'quadIn', settle: 0.1, ez: { shake: 'linear', calmR: 'linear' } }),
+  ...snap(3.20, { pos: [0, 0, 0], ...COIL_LATE, shake: 0.6 }, { pos: [0, 0, -0.25], ...THROW_OVER, shake: 0, calmR: 1 }, null,
+    { ease: 'quadIn', ez: { shake: 'linear', calmR: 'linear' } }),
+  K(3.25, { pos: [0, 0, -0.3], ...THROW_CARRY }, 'linear'),
+  K(3.42, { pos: [0, 0, -0.28], ...THROW }, 'quadOut'),
   K(3.75, { look: [0.4, 1.9, -5.6] }, 'sineInOut'),
   // ---- 4.00 SNAP into the flat dash (the body freezes in the dash pose while it flies) ----
   ...snap(4.00, { ...THROW_LATE, look: vHead, plant: 1 }, { pos: [0.02, -0.06, -0.45], ...DASH, plant: 0 }, null,
     { ez: { look: 'linear', plant: 'linear' } }),
-  K(4.13, { pos: [0.08, -0.12, -1.98], ...DASH_LATE }, 'linear'),
+  K(4.065, { pos: [0.05, -0.1, -1.2], ...DASH_B }, 'linear'),
+  K(4.13, { pos: [0.08, -0.12, -1.98], ...DASH_C }, 'linear'),
   // ---- 4.15 SNAP the grab (left hand to her collar, body up, legs swing to land) ----
   K(4.15, { pos: [0.10, 0.06, -2.22], ...GRAB, lookW: 1 }, 'linear'),
   // ---- 4.25 SNAP the plant, then face to face: he pulls her in, cocky head tilt, held ----
@@ -138,10 +161,14 @@ const keys = [
     { ease: 'quadIn', ez: { shake: 'linear' } }),
   // ---- follow-through (after the hit-stop): the leg drives on and up, a little hop forward; held ----
   K(4.92, { pos: [0.12, 0.07, -2.54] }, 'sineOut'),
-  K(4.98, { pos: [0.12, 0, -2.58], ...FOLLOW }, 'quadOut', { pos: 'sineIn' }),
+  K(4.93, { ...FOLLOW_CARRY }, 'linear'),
+  K(4.98, { pos: [0.12, 0, -2.58] }, 'sineIn'),
+  K(5.08, { ...FOLLOW }, 'quadOut'),
   K(5.25, { ...FOLLOW_LATE }, 'sineInOut'),
   // ---- 5.30 SNAP the foot down (lands the kick), settle; hold watching her vanish, head tilts ----
-  ...snap(5.30, FOLLOW_LATE, DOWN_OVER, DOWN, { n: 3, ease: 'quadIn', settle: 0.12 }),
+  ...snap(5.30, FOLLOW_LATE, DOWN_OVER, null, { n: 3, ease: 'quadIn' }),
+  K(5.35, { ...DOWN_CARRY }, 'linear'),
+  K(5.48, { ...DOWN }, 'quadOut'),
   K(5.62, { ...WATCH, look: FACE }, 'sineInOut'),
   // ---- 5.72–6.24 two calm steps to the cube (the planted leg rolls back as the root advances) ----
   K(5.72, { pos: [0.12, 0, -2.58], ...WATCH }, 'linear'),

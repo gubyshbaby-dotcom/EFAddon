@@ -109,6 +109,7 @@ def main():
     res['hit_layers'] = sfx.hit_log
     res['skipped_music_transients'] = score.skipped
     res['blinks'] = tl.blinks()
+    res['footsteps'] = sfx.step_times
     with open(os.path.join(OUT, 'report.json'), 'w') as f:
         json.dump(res, f, indent=1, ensure_ascii=False)
     lap(f'check.png + report.json; total {time.time() - T_START:.1f} s')
