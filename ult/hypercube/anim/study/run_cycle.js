@@ -7,10 +7,11 @@
 // The 12-px block shows the SHIN: its bottom is the sole, it lies along the shin, so its top floats past the virtual
 // knee — that floating top IS the knee: in front of the belly on the knee drive, behind and up on the heel kick,
 // forward of the hip on the bent stance leg, at the hip socket only when the leg is straight.
-//   swing (FK): push-off → heel kick (thigh −56°, shin flung up behind: the block lies behind the butt like the pack's
-//     trailing leg, its top = the knee under the hip) → folded pass (knee 94–106°) → high knee (thigh +74°, shin
-//     hanging = the block stands in front of the belly) → the shin swings out and paws down onto the ground.
-//     (A deeper knee, 110–140°, with the thigh back turns the shin-block vertical under the hip — a stilt again.)
+//   swing (FK): push-off → heel kick (thigh −40°, knee 112–118°: the block rises behind the butt, sole up) → tucked
+//     pass under the body (knee 116°, heel high) → the shin snaps vertical: high knee (thigh +82°, knee 78°: the block
+//     stands in front of the belly) → the shin swings out and paws down onto the ground.
+//   v3 proportions (author: "limbs too far out"): thigh 3.5 px + shin 8.5, upper arm 2.5 + forearm 7.5, so the block
+//     top floats ≤ 6 px from the socket (≈ 2·thigh·sin(flex/2)).
 //   stance (IK): the sole is pinned (heel, then toe: it rolls, never skates); the knee lands at 16°, absorbs to 58°
 //     at mid-stance (the body sinks), extends to 14° for the push. Body height comes out of that.
 // Legs are in the ROOT frame (legSpace 'root'); the hip sockets are recomputed from the torso every key.
@@ -57,26 +58,29 @@ const headAt = (phi, torso) => {
 // snaps open at the front like a hook-punch and closes again, then the arm is ripped back round the OUTSIDE (wide
 // flare) and the elbow flicks open once more at the back.
 const ARM = loopCurve([
-  [0.03, [-70, -4, 40, 80, 0.4, 0, -1.2]],   // back extreme: elbow flicks open a little, flared out
-  [0.10, [-64, -2, 34, 98, 0.3, 0, -1.0]],
-  [0.19, [-30, 6, 18, 104, 0, 0, -0.2]],      // drive starts, folded tight
-  [0.26, [15, 14, 12, 108, 0, 0.3, 0.6]],     // through the bottom: fist by the hip, elbow 108°
-  [0.34, [62, 26, 14, 100, -0.2, 0.5, 1.6]],
-  [0.43, [96, 32, 22, 62, -0.4, 0.6, 2.2]],   // hook-punch: the elbow snaps open, fist thrust forward and in
-  [0.50, [96, 28, 28, 76, -0.3, 0.5, 1.8]],
-  [0.57, [82, 22, 44, 100, 0, 0.3, 0.8]],     // recoil: closes and opens out
-  [0.66, [38, 8, 72, 106, 0.3, 0.3, 0.2]],    // ripped back round the outside, wide
-  [0.76, [-20, -6, 78, 98, 0.4, 0.2, -0.4]],
-  [0.88, [-58, -6, 54, 100, 0.4, 0, -1.0]],
+  [0.03, [-70, -4, 40, 80, 0.2, 0, -0.6]],   // back extreme: elbow flicks open a little, flared out
+  [0.10, [-64, -2, 34, 98, 0.2, 0, -0.5]],
+  [0.19, [-30, 6, 18, 104, 0, 0, -0.1]],      // drive starts, folded tight
+  [0.26, [15, 14, 12, 108, 0, 0.2, 0.3]],     // through the bottom: fist by the hip, elbow 108°
+  [0.34, [62, 26, 14, 100, -0.1, 0.3, 0.7]],
+  [0.43, [96, 32, 22, 62, -0.2, 0.3, 1.0]],   // hook-punch: the elbow snaps open, fist thrust forward and in
+  [0.50, [96, 28, 28, 76, -0.2, 0.3, 0.8]],
+  [0.57, [82, 22, 44, 100, 0, 0.2, 0.4]],     // recoil: closes and opens out
+  [0.66, [38, 8, 72, 106, 0.2, 0.2, 0.1]],    // ripped back round the outside, wide
+  [0.76, [-20, -6, 78, 98, 0.2, 0.1, -0.2]],
+  [0.88, [-58, -6, 54, 100, 0.2, 0, -0.5]],
 ]);
 
 // legs, leg phase psi: 0 = touchdown, S = toe-off. Swing keys: virtual thigh pitch (root frame) and knee flexion.
 const SIDE = { legR: 'R', legL: 'L' };
+// Minecraft proportions for the virtual limbs (px): short thigh / upper arm, so the block top floats only 2–5 px
+const LEG_T = 3.5, ARM_U = 2.5, LEG_S = 12 - LEG_T;
+const hipToSole = knee => Math.sqrt(LEG_T * LEG_T + LEG_S * LEG_S + 2 * LEG_T * LEG_S * Math.cos(knee * Math.PI / 180));
 const LEGS = { legR: 0, legL: 0.5 };
 const TD_THIGH = 28, TD_KNEE = 16;                       // the touchdown pose (shin 12° forward: the heel lands first)
 const STANCE_KNEE = openCurve([[0, TD_KNEE], [0.45, 58], [1, 14]], 160, -60);   // over the stance 0..1: land, absorb, push
-const SWING_THIGH = [[0.28, -46], [0.36, -56], [0.44, -54], [0.51, -40], [0.58, -10], [0.64, 24], [0.70, 54], [0.77, 74], [0.86, 64], [0.94, 42]];
-const SWING_KNEE = [[0.28, 48], [0.36, 62], [0.44, 66], [0.51, 76], [0.58, 94], [0.64, 106], [0.70, 102], [0.77, 86], [0.86, 55], [0.94, 26]];
+const SWING_THIGH = [[0.26, -34], [0.32, -40], [0.38, -36], [0.44, -22], [0.50, -4], [0.56, 12], [0.62, 28], [0.67, 46], [0.71, 70], [0.75, 88], [0.81, 88], [0.88, 68], [0.95, 42]];
+const SWING_KNEE = [[0.26, 55], [0.32, 90], [0.38, 112], [0.44, 118], [0.50, 120], [0.56, 120], [0.62, 120], [0.67, 118], [0.71, 104], [0.75, 82], [0.81, 62], [0.88, 42], [0.95, 20]];
 const SWING_ROLL = loopCurve([[0.0, 0], [0.3, 3], [0.42, 8], [0.6, 10], [0.72, 6], [0.9, 2]]);
 const KNEE_DIR = [0, 0, 1];                              // knees point straight ahead
 const kneeStance = u => STANCE_KNEE(u);
@@ -92,14 +96,14 @@ function stanceTable(leg) {
   const side = SIDE[leg], N = 96, rows = [];
   // touchdown pose (FK) with the root at height 0 → the lowest corner gives the body height
   const h0 = hipAt(leg, LEGS[leg]);
-  const td = vleg(side, h0, [TD_THIGH, 0, 0], TD_KNEE);
+  const td = vleg(side, h0, [TD_THIGH, 0, 0], TD_KNEE, { thighLen: LEG_T });
   const y0 = -lowOf(leg, td).y;                          // px: lift the body so the heel touches the ground
   let e = edgesOf(leg, td);
   let mode = 'heel', pin = [e.heel[0], e.heel[1] + y0, e.heel[2]];   // world-ish: root x/z at touchdown, y on the ground (0)
   let res = { ...td, hip: h0 }, Y = y0;
   for (let i = 0; i <= N; i++) {
     const u = i / N, psi = S * u, phi = wrap(psi + LEGS[leg]), dz = V * psi * T / PX;   // root has moved dz px forward
-    const H = hipAt(leg, phi), d = 12 * Math.cos(kneeStance(u) * Math.PI / 360);
+    const H = hipAt(leg, phi), d = hipToSole(kneeStance(u));
     if (i > 0) for (let it = 0; it < 4; it++) {
       // sole centre from the pinned edge, using the current shin orientation
       e = edgesOf(leg, res);
@@ -112,7 +116,7 @@ function stanceTable(leg) {
       const vert = Math.sqrt(Math.max(0.25, d * d - hor2));                       // hip above the sole centre
       Y = off[1] + vert - H[1];                                                    // root height (px) that makes it so
       const foot = [C[0], off[1] - Y, -C[2]];                                      // sole centre, root frame z fwd
-      res = { ...vlegIK(side, H, foot, { knee: KNEE_DIR }), hip: H };
+      res = { ...vlegIK(side, H, foot, { knee: KNEE_DIR, thighLen: LEG_T }), hip: H };
     }
     e = edgesOf(leg, res);
     if (i > 0 && mode === 'heel' && e.toe[1] < e.heel[1]) { mode = 'toe'; pin = [e.toe[0], 0, e.toe[2] - dz]; }
@@ -138,7 +142,7 @@ const SWING = Object.fromEntries(Object.keys(LEGS).map(leg => {
 function legPose(leg, psi, phi) {
   if (psi < S) return { ang: fromTable(TABLE[leg], psi, 'ang'), pos: fromTable(TABLE[leg], psi, 'pos') };
   const sw = SWING[leg];
-  return vleg(SIDE[leg], hipAt(leg, phi), [sw.thigh(psi), 0, SWING_ROLL(psi)], sw.knee(psi));
+  return vleg(SIDE[leg], hipAt(leg, phi), [sw.thigh(psi), 0, SWING_ROLL(psi)], sw.knee(psi), { thighLen: LEG_T });
 }
 
 // body height: from the planted leg; in the flight a hop from the push to the next landing
@@ -179,7 +183,7 @@ for (let i = 0; i <= END * FPS; i++) {
   for (const [arm, o] of [['armR', 0], ['armL', 0.5]]) {
     const a = ARM(wrap(phi - o)), sd = arm === 'armR' ? 1 : -1;
     const upper = partAngles(arm, mul(tr(torso.m), partM(arm, a.slice(0, 3))));
-    const r = varm(arm === 'armR' ? 'R' : 'L', upper, a[3], { shoulder: [sd * (5 + a[4]), 4 + a[5], a[6]] });
+    const r = varm(arm === 'armR' ? 'R' : 'L', upper, a[3], { shoulder: [sd * (5 + a[4]), 4 + a[5], a[6]], upperLen: ARM_U });
     put(arm, t, r.ang);
     put(arm + '.pos', t, r.pos);
   }
