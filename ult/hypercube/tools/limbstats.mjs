@@ -2,6 +2,8 @@
 // travel: range (max−min, px) of each fist / sole relative to the torso centre, in the actor's root frame (so a limb
 // that only rotates with the torso doesn't count), along forward (z) and vertical (y). The pack's run is the yardstick.
 // SELF: frames where an arm or leg box sinks > 1 px into the head or another limb box (e.g. a fist through the face).
+// JERK: per-frame acceleration (second difference, px/frame²) of fists, soles, head and pelvis relative to the root —
+// spikes are the 'twitchy' frames (a sudden change of direction or speed); listed worst-first with their times.
 import * as THREE from 'three';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
@@ -25,13 +27,16 @@ function depth(pa, pb) { // max depth (px) of pa's box corners/edge points insid
   return worst;
 }
 const pts = { fistR: ['armR', [1, -10, 0]], fistL: ['armL', [-1, -10, 0]], soleR: ['legR', [0, -12, 0]], soleL: ['legL', [0, -12, 0]] };
-const rng = {}; const self = {}; const rootInv = new THREE.Matrix4();
+const rng = {}; const self = {}; const rootInv = new THREE.Matrix4(); const hist = {};
 for (let t = from; t <= to + 1e-9; t += 1 / fps) {
   applyPose(pl, poseAt(def, t)); pl.root.updateMatrixWorld(true);
   rootInv.copy(pl.root.matrixWorld).invert();
   const tc = new THREE.Vector3().setFromMatrixPosition(pl.parts.torso.matrixWorld).applyMatrix4(rootInv);
-  for (const [n, [part, l]] of Object.entries(pts)) {
-    const p = new THREE.Vector3(l[0] * PX, l[1] * PX, l[2] * PX).applyMatrix4(pl.parts[part].matrixWorld).applyMatrix4(rootInv).sub(tc).divideScalar(PX);
+  for (const [n, [part, l]] of Object.entries({ ...pts, head: ['head', [0, 8, 0]], pelvis: ['torso', [0, -6, 0]] })) {
+    const pw = new THREE.Vector3(l[0] * PX, l[1] * PX, l[2] * PX).applyMatrix4(pl.parts[part].matrixWorld).applyMatrix4(rootInv);
+    (hist[n] ||= []).push([+t.toFixed(3), pw.clone().divideScalar(PX)]);
+    if (!pts[n]) continue;
+    const p = pw.sub(tc).divideScalar(PX);
     const r = (rng[n] ||= { z: [1e9, -1e9], y: [1e9, -1e9] });
     r.z = [Math.min(r.z[0], -p.z), Math.max(r.z[1], -p.z)]; r.y = [Math.min(r.y[0], p.y), Math.max(r.y[1], p.y)];
   }
@@ -39,5 +44,13 @@ for (let t = from; t <= to + 1e-9; t += 1 / fps) {
 }
 for (const [n, r] of Object.entries(rng)) console.log(n.padEnd(6), `forward ${r.z[0].toFixed(1)}…${r.z[1].toFixed(1)} (range ${(r.z[1] - r.z[0]).toFixed(1)} px)   vertical ${r.y[0].toFixed(1)}…${r.y[1].toFixed(1)} (range ${(r.y[1] - r.y[0]).toFixed(1)} px)`);
 const frames = Math.round((to - from) * fps) + 1;
+const jerks = [];
+for (const [n, h] of Object.entries(hist)) for (let i = 1; i < h.length - 1; i++) {
+  const acc = h[i + 1][1].clone().add(h[i - 1][1]).sub(h[i][1].clone().multiplyScalar(2)).length();
+  jerks.push([acc, n, h[i][0]]);
+}
+const accs = jerks.map(j => j[0]).sort((x, y) => x - y), q = p => accs[Math.floor((accs.length - 1) * p)];
+console.log(`JERK px/frame²: p50 ${q(0.5).toFixed(2)}  p95 ${q(0.95).toFixed(2)}  max ${q(1).toFixed(2)}`);
+console.log('JERK worst: ' + jerks.sort((x, y) => y[0] - x[0]).slice(0, 10).map(([v, n, t]) => `${n}@${t} ${v.toFixed(1)}`).join(', '));
 for (const [k, v] of Object.entries(self)) console.log(`SELF ${k}: ${v.length}/${frames} frames, worst ${Math.max(...v.map(x => x[1]))} px, e.g. t=${v.slice(0, 4).map(x => x[0]).join(', ')}`);
 if (!Object.keys(self).length) console.log('SELF: none');
