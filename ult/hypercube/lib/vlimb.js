@@ -83,3 +83,50 @@ export function apply(tracks, side, t, res, ease = 'linear') {
   (tracks[k] ||= []).push([t, res.ang.map(v => +v.toFixed(3)), ease]);
   (tracks[k + '.pos'] ||= []).push([t, res.pos.map(v => +v.toFixed(3)), ease]);
 }
+
+// ---- arms: block = FOREARM, fist end at the fist; its top floats where the elbow is (behind/below the shoulder on a
+// guard, out to the side on a hook, back behind the body on a wind-up), at the shoulder only when the arm is straight.
+// Arms hang from the torso, so everything here is in the TORSO frame (px from the torso centre, z forward):
+// shoulder sockets (±5, 4) px (slim 3.5). Virtual upper arm 4 px + forearm 6 px = the block's pivot→fist end (10 px),
+// so a straight arm sits exactly in its socket.
+export const UPPER = 4, FORE = 6;
+const ARM_REST = slim => ({ R: [5, slim ? 3.5 : 4, 0], L: [-5, slim ? 3.5 : 4, 0] });
+function armBlock(side, qF, fist, slim) {
+  const pivot = fist.clone().sub(new THREE.Vector3(0, -(UPPER + FORE), 0).applyQuaternion(qF));
+  return { ang: angFromQuat(side, qF), pos: arr(pivot.sub(v3(ARM_REST(slim)[side]))) };
+}
+/** FK: upper arm [pitch, yaw, roll] (rig conventions: pitch + = forward/up, roll + = out to the side) + elbow flexion
+ *  (deg, + = forearm comes forward/up like a real elbow) → { ang, pos, elbow, fist } for 'armX' / 'armX.pos'. */
+export function varm(side, upper, elbow, { slim = false, shoulder } = {}) {
+  const qU = quatFromAng(side, upper);
+  const S = v3(shoulder || ARM_REST(slim)[side]);
+  const E = S.clone().add(new THREE.Vector3(0, -UPPER, 0).applyQuaternion(qU));
+  const qF = qU.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), elbow * D2R));
+  const W = E.clone().add(new THREE.Vector3(0, -FORE, 0).applyQuaternion(qF));
+  return { ...armBlock(side, qF, W, slim), elbow: arr(E), fist: arr(W) };
+}
+/** IK: put the fist end at `fist` (torso frame, px); the elbow bends toward opts.elbow (default down, back and out). */
+export function varmIK(side, fist, { slim = false, shoulder, elbow: ed, twist = 0 } = {}) {
+  const S = v3(shoulder || ARM_REST(slim)[side]), W0 = v3(fist);
+  const d = W0.clone().sub(S), len = Math.min(d.length(), UPPER + FORE - 1e-4), dir = d.clone().normalize();
+  const want = v3(ed || [side === 'R' ? 0.6 : -0.6, -1, -0.5]);
+  const perp = want.clone().sub(dir.clone().multiplyScalar(want.dot(dir))).normalize();
+  // two unequal segments: law of cosines for the angle at the shoulder
+  const cosA = (UPPER * UPPER + len * len - FORE * FORE) / (2 * UPPER * len);
+  const A = Math.acos(Math.max(-1, Math.min(1, cosA)));
+  const E = S.clone().add(dir.clone().multiplyScalar(Math.cos(A) * UPPER)).add(perp.clone().multiplyScalar(Math.sin(A) * UPPER));
+  const W = S.clone().add(dir.clone().multiplyScalar(len));
+  const down = W.clone().sub(E).normalize();                      // forearm axis (block -Y)
+  let fw = perp.clone().negate();                                  // palm side faces away from the elbow point
+  fw = fw.sub(down.clone().multiplyScalar(fw.dot(down))).normalize();
+  const yAxis = down.clone().negate(), zAxis = fw.clone().negate(), xAxis = new THREE.Vector3().crossVectors(yAxis, zAxis).normalize();
+  let qF = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis));
+  if (twist) qF = new THREE.Quaternion().setFromAxisAngle(yAxis, twist * D2R).multiply(qF);
+  return { ...armBlock(side, qF, W, slim), elbow: arr(E), fist: arr(W) };
+}
+/** Push arm keys: 'armR'/'armL' and their '.pos'. */
+export function applyArm(tracks, side, t, res, ease = 'linear') {
+  const k = 'arm' + side;
+  (tracks[k] ||= []).push([t, res.ang.map(v => +v.toFixed(3)), ease]);
+  (tracks[k + '.pos'] ||= []).push([t, res.pos.map(v => +v.toFixed(3)), ease]);
+}
