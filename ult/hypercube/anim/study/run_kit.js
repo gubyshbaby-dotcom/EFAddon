@@ -119,3 +119,36 @@ export function soleEdges(leg, w, a) {
   const p = l => { const v = mv(m, l); return [w[0] + v[0], w[1] + v[1], w[2] + v[2]]; };
   return { heel: p([0, -12, 2]), toe: p([0, -12, -2]) };
 }
+
+// ---- secondary motion (precomputed, deterministic) ----
+/** Steady-state response of a damped spring follower y'' = w0²(x − y) − 2ζw0·y' to a PERIODIC target x(phi), phi in
+ *  [0,1) over a period of T seconds. Simulated over `warm` periods from rest so the result loops seamlessly; returns a
+ *  sampler phi → y (number or array, like the target). f0 = natural frequency (Hz). */
+export function periodicSpring(target, { f0, zeta, T, N = 480, warm = 8 }) {
+  const w = 2 * Math.PI * f0, dt = T / N, sub = 4, h = dt / sub;
+  const x0 = target(0), isArr = Array.isArray(x0);
+  const y = isArr ? [...x0] : [x0], v = y.map(() => 0), out = new Array(N);
+  for (let c = 0; c < warm; c++) for (let i = 0; i < N; i++) {
+    if (c === warm - 1) out[i] = [...y];
+    const x = target(i / N), xs = isArr ? x : [x];
+    for (let s = 0; s < sub; s++) for (let j = 0; j < y.length; j++) {
+      v[j] += (w * w * (xs[j] - y[j]) - 2 * zeta * w * v[j]) * h;
+      y[j] += v[j] * h;
+    }
+  }
+  return phi => {
+    const x = (phi - Math.floor(phi)) * N, i = Math.floor(x) % N, s = x - Math.floor(x), a = out[i], b = out[(i + 1) % N];
+    const r = a.map((v, j) => v + (b[j] - v) * s);
+    return isArr ? r : r[0];
+  };
+}
+/** rounded square wave of phase x: +1 at x = 0, −1 at x = 0.5; k = squareness (≈ 0 → cosine) */
+export const roundSquare = (x, k = 2) => Math.tanh(k * Math.cos(2 * Math.PI * x)) / Math.tanh(k);
+/** smooth deterministic wobble of time t (sum of incommensurate sines), roughly in [−1, 1] */
+export const wobble = (t, seed = 0) =>
+  (Math.sin(2 * Math.PI * 0.37 * t + seed * 1.7) + 0.7 * Math.sin(2 * Math.PI * 0.83 * t + seed * 2.9 + 1.1) + 0.5 * Math.sin(2 * Math.PI * 1.31 * t + seed * 4.3 + 2.3)) / 2.2;
+/** world yaw / roll / pitch-of-forward (deg) of a rotation matrix (three axes) */
+export function worldYRP(m) {
+  const f = mv(m, [0, 0, -1]), u = mv(m, [1, 0, 0]);
+  return [Math.atan2(-f[0], -f[2]) / D, Math.asin(Math.max(-1, Math.min(1, u[1]))) / D, Math.asin(Math.max(-1, Math.min(1, -f[1]))) / D];
+}
