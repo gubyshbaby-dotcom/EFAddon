@@ -14,84 +14,90 @@ const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const U = (o, root = true) => ({ a: 'user', root, o });
 
 export const SHOTS = [
-  // ---- S1 low hero angle: from behind his right shoulder (her far ahead) the camera sweeps round to a low front 3/4 that
-  //      looks up at him; a punch-in on the 0.40 stomp, then a slow push while he charges ----
-  { id: 'S1', t0: 0.0, t1: 0.8, keys: [
-    { t: 0.0, pos: { ca: 'user', r: 2.5, h: 0.26, ang: 24 }, look: { a: 'user', b: 'chest', o: [-0.1, 0.1, -1.6] }, fov: 58, roll: 2 },
-    { t: 0.34, pos: { ca: 'user', r: 2.1, h: 0.2, ang: 92 }, look: { a: 'user', b: 'chest', o: [0, 0.1, -0.5] }, fov: 54, roll: -2, e: 'sineInOut' },
-    { t: 0.43, pos: { ca: 'user', r: 2.7, h: 0.2, ang: 126 }, look: { a: 'user', root: true, o: [0, 0.78, 0] }, fov: 50, roll: -5, e: 'quadOut' },
-    { t: 0.8, pos: { ca: 'user', r: 2.35, h: 0.16, ang: 146 }, look: { a: 'user', root: true, o: [0, 0.8, 0] }, fov: 46, roll: -3, e: 'sineInOut' } ] },
-  // ---- S2 close on the right hand rising and opening (his face behind it); crash zoom into the palm from 1.40 ----
-  { id: 'S2', t0: 0.8, t1: 1.6, keys: [
-    { t: 0.8, pos: U([1.45, 0.75, -0.75]), look: { a: 'user', b: 'fistR', o: [-0.1, 0.05, 0.1] }, fov: 46, roll: 4 },
-    { t: 1.0, pos: U([1.62, 1.0, -1.5]), look: { a: 'user', b: 'fistR', o: [-0.24, 0.2, 0.24] }, fov: 42, roll: 2, e: 'sineOut' },
-    { t: 1.4, pos: U([1.5, 1.02, -1.4]), look: { a: 'user', b: 'fistR', o: [-0.18, 0.18, 0.2] }, fov: 37, roll: 0, e: 'sineInOut' },
-    { t: 1.6, pos: { a: 'user', b: 'fistR', o: [0.62, 0.22, -0.2] }, look: { a: 'user', b: 'fistR', o: [0, 0.1, 0] }, fov: 15, roll: -6, e: 'expoIn' } ] },
-  // ---- S3 wide 3/4 from his right: the thrust (cut on the action), the seed flies past her, the camera pulls back and
-  //      tilts up as the tesseract unfolds behind her ----
-  { id: 'S3', t0: 1.6, t1: 2.2, keys: [
-    { t: 1.6, pos: [2.0, 0.5, 0.7], look: [0.15, 1.0, -1.0], fov: 50, roll: -5 },
-    { t: 1.74, pos: [2.8, 0.7, 0.8], look: [0.15, 1.25, -3.0], fov: 52, roll: -2, e: 'quadOut' },
-    { t: 2.2, pos: [3.5, 1.0, 0.5], look: [0.05, 1.85, -5.0], fov: 55, roll: 0, e: 'sineOut' } ] },
-  // ---- S4 low side tracking shot of the dash and the grab: the camera runs with him but slower, so he shoots across ----
-  { id: 'S4', t0: 2.2, t1: 2.51, keys: [
-    { t: 2.2, pos: [2.9, 0.5, -0.55], look: { a: 'user', b: 'chest', o: [0, 0, -0.8] }, fov: 54, roll: 3 },
-    { t: 2.33, pos: [3.1, 0.6, -1.5], look: { a: 'user', b: 'chest', o: [0, 0.05, -0.6] }, fov: 52, roll: 1, e: 'sineOut' },
-    { t: 2.51, pos: [3.1, 0.7, -2.15], look: { a: 'user', b: 'chest', o: [0, 0.05, -0.5] }, fov: 50, roll: -2, e: 'sineOut' } ] },
-  // ---- S4b her POV: shoved off, she sees him chamber and the sole come at her (cut on the contact) ----
-  { id: 'S4b', t0: 2.51, t1: 2.6, keys: [
-    { t: 2.51, pos: { a: 'victim', b: 'eyes', rel: [0, 0.03, 0.11] }, look: { a: 'user', b: 'chest', o: [0, -0.15, 0] }, fov: 74, roll: -6 },
-    { t: 2.6, pos: { a: 'victim', b: 'eyes', rel: [0, 0.03, 0.11] }, look: { a: 'user', b: 'pelvis', o: [0, -0.2, 0] }, fov: 84, roll: 4, e: 'quadIn' } ] },
-  // ---- S5 beside the cube: the impact, she flies at the camera's left INTO the face and is swallowed; the cube snaps shut;
-  //      the camera turns to him swaggering toward it ----
-  { id: 'S5', t0: 2.6, t1: 3.2, keys: [
-    { t: 2.6, pos: [2.7, 0.75, -3.75], look: { a: 'victim', b: 'chest', o: [0, -0.1, 0.35] }, fov: 50, roll: 4 },
-    { t: 2.86, pos: [2.75, 1.05, -4.7], look: { a: 'victim', b: 'chest', o: [0, 0, -0.1] }, fov: 50, roll: 1, e: 'quadOut' },
-    { t: 2.98, pos: [2.7, 1.2, -4.8], look: [0.3, 1.75, -5.5], fov: 50, roll: 0, e: 'sineInOut' },
-    { t: 3.08, pos: [2.75, 1.1, -4.6], look: { a: 'user', root: true, o: [-0.2, 0.95, 0] }, fov: 54, roll: -1, e: 'sineInOut' },
-    { t: 3.2, pos: [2.75, 1.0, -4.35], look: { a: 'user', root: true, o: [0, 0.9, 0] }, fov: 56, roll: -2, e: 'sineInOut' } ] },
-  // ---- S6 the dive: from above his left shoulder straight into the face (the path stays left of and above him) ----
-  { id: 'S6', t0: 3.2, t1: 3.4, keys: [
-    { t: 3.2, pos: [-0.95, 2.3, -1.5], look: [-0.3, 1.8, -5.4], fov: 56, roll: 0 },
-    { t: 3.4, pos: [-0.62, 2.05, -5.3], look: [-0.5, 1.95, -8.0], fov: 108, roll: 8, e: 'expoIn' } ] },
-  { id: 'S7', t0: 3.4, t1: 4.8, keys: [
-    { t: 3.4, pos: { c: I, r: 3.6, h: 0.9, ang: 20 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 54 },
-    { t: 4.8, pos: { c: I, r: 3.0, h: 0.5, ang: 140 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 50, e: 'sineInOut' } ] },
-  { id: 'S8', t0: 4.8, t1: 5.6, keys: [
-    { t: 4.8, pos: { c: I, r: 2.5, h: 0.4, ang: 150 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 52 },
-    { t: 5.2, pos: { c: I, r: 2.4, h: 0.6, ang: 240 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 50, e: 'expoInOut' },
-    { t: 5.6, pos: { c: I, r: 2.5, h: 0.3, ang: 330 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 52, e: 'expoInOut' } ] },
-  { id: 'S9', t0: 5.6, t1: 6.4, keys: [
-    { t: 5.6, pos: { c: I, r: 0.6, h: 5.0, ang: 0 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 60 },
-    { t: 6.4, pos: { c: I, r: 0.6, h: 4.2, ang: 160 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 58, e: 'sineIn' } ] },
-  { id: 'S10', t0: 6.4, t1: 7.2, keys: [
-    { t: 6.4, pos: { c: I, r: 3.2, h: 0.6, ang: 0 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 56 },
-    { t: 7.2, pos: { c: I, r: 2.8, h: 0.2, ang: 400 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 52, e: 'quadIn' } ] },
-  { id: 'S11', t0: 7.2, t1: 8.0, keys: [
-    { t: 7.2, pos: { a: 'victim', b: 'head', o: [0.9, 0.15, 0.9] }, look: { a: 'victim', b: 'head', o: [0, 0, 0] }, fov: 34 },
-    { t: 8.0, pos: { a: 'victim', b: 'head', o: [0.6, 0.1, 0.65] }, look: { a: 'victim', b: 'head', o: [0, 0, 0] }, fov: 30, e: 'sineIn' } ] },
-  { id: 'S12', t0: 8.0, t1: 8.8, keys: [
-    { t: 8.0, pos: add(I, [0.5, 2.4, 6.4]), look: add(I, [0, 0.9, 0]), fov: 52 },
-    { t: 8.4, pos: add(I, [0.4, 1.9, 5.0]), look: add(I, [0, 0.95, 0]), fov: 48, e: 'quartIn' },
-    { t: 8.8, pos: add(I, [0.2, 1.6, 4.4]), look: add(I, [0, 1.0, 0]), fov: 50, e: 'sineOut' } ] },
-  { id: 'S13', t0: 8.8, t1: 9.2, keys: [
-    { t: 8.8, pos: { a: 'victim', b: 'pelvis', o: [1.4, -1.6, 1.6] }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 50 },
-    { t: 9.2, pos: { a: 'victim', b: 'pelvis', o: [1.2, -2.0, 1.2] }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 54, e: 'sineOut' } ] },
-  { id: 'S14', t0: 9.2, t1: 9.65, keys: [
-    { t: 9.2, pos: { a: 'victim', b: 'chest', o: [0.6, -1.4, 0.8] }, look: { a: 'user', b: 'chest', o: [0, 0, 0] }, fov: 60 },
-    { t: 9.65, pos: { a: 'victim', b: 'chest', o: [0.4, -1.1, 0.6] }, look: { a: 'user', b: 'chest', o: [0, 0, 0] }, fov: 70, e: 'expoIn' } ] },
-  { id: 'S15', t0: 9.65, t1: 10.2, keys: [
-    { t: 9.65, pos: [7.5, 0.5, 2.6], look: [0, 2.6, -6.6], fov: 58 },
-    { t: 10.2, pos: [7.0, 0.6, 2.0], look: [0, 1.0, -6.6], fov: 54, e: 'quadOut' } ] },
-  { id: 'S16', t0: 10.2, t1: 11.2, keys: [
-    { t: 10.2, pos: add(WORLD.landing, [3.2, 0.7, 2.6]), look: add(WORLD.landing, [0, 0.8, 0]), fov: 48 },
-    { t: 11.2, pos: add(WORLD.landing, [2.6, 0.6, 2.2]), look: add(WORLD.landing, [0, 0.8, 0]), fov: 46, e: 'sineOut' } ] },
-  { id: 'S17', t0: 11.2, t1: 13.4, keys: [
-    { t: 11.2, pos: { c: WORLD.landing, r: 3.8, h: 0.35, ang: 70 }, look: add(WORLD.landing, [0, 1.2, 0]), fov: 50 },
-    { t: 13.4, pos: { c: WORLD.landing, r: 3.4, h: 0.5, ang: 20 }, look: add(WORLD.landing, [0, 1.35, 0]), fov: 46, e: 'sineInOut' } ] },
-  { id: 'S18', t0: 13.4, t1: 15.0, keys: [
-    { t: 13.4, pos: { a: 'user', b: 'head', o: [0.55, 0.05, -1.3] }, look: { a: 'user', b: 'head', o: [0, 0.02, 0] }, fov: 34 },
-    { t: 15.0, pos: { a: 'user', b: 'head', o: [0.45, 0.05, -1.0] }, look: { a: 'user', b: 'head', o: [0, 0.02, 0] }, fov: 30, e: 'sineOut' } ] },
+  // ---- S1 calm establishing: low wide side view, both fighters, slow drift (a held, quiet frame) ----
+  { id: 'S1', t0: 0.0, t1: 1.2, keys: [
+    { t: 0.0, pos: [5.6, 0.5, -1.25], look: [0.0, 0.9, -1.95], fov: 40, roll: 0 },
+    { t: 1.2, pos: [5.35, 0.52, -1.45], look: [0.0, 0.9, -2.0], fov: 39, roll: 1, e: 'sineInOut' } ] },
+  // ---- S2 low hero angle on him: punch-in on the charge snap, then a slow push while he trembles ----
+  { id: 'S2', t0: 1.2, t1: 2.0, keys: [
+    { t: 1.2, pos: { ca: 'user', r: 3.0, h: 0.2, ang: 118 }, look: { a: 'user', root: true, o: [0, 0.85, 0] }, fov: 54, roll: -2 },
+    { t: 1.26, pos: { ca: 'user', r: 2.6, h: 0.17, ang: 124 }, look: { a: 'user', root: true, o: [0, 0.8, 0] }, fov: 44, roll: -6, e: 'quadOut' },
+    { t: 2.0, pos: { ca: 'user', r: 2.3, h: 0.15, ang: 142 }, look: { a: 'user', root: true, o: [0, 0.8, 0] }, fov: 41, roll: -3, e: 'sineInOut' } ] },
+  // ---- S3 close on the palm and the seed, his face behind; crash zoom 3.0–3.2 ----
+  { id: 'S3', t0: 2.0, t1: 3.2, keys: [
+    { t: 2.0, pos: U([1.62, 1.0, -1.5]), look: U([0.12, 1.12, -0.62]), fov: 42, roll: 3 },
+    { t: 2.12, pos: U([1.6, 1.0, -1.48]), look: { a: 'user', b: 'fistR', o: [-0.24, 0.2, 0.24] }, fov: 41, roll: 2, e: 'quadOut' },
+    { t: 3.0, pos: U([1.46, 1.02, -1.36]), look: { a: 'user', b: 'fistR', o: [-0.18, 0.18, 0.2] }, fov: 37, roll: 0, e: 'sineInOut' },
+    { t: 3.2, pos: { a: 'user', b: 'fistR', o: [0.62, 0.22, -0.2] }, look: { a: 'user', b: 'fistR', o: [0, 0.1, 0] }, fov: 15, roll: -6, e: 'expoIn' } ] },
+  // ---- S4 wide 3/4 from his right: the throw (cut on the action), the seed flies past her, the camera pulls back and
+  //      tilts up as the tesseract unfolds; she turns ----
+  { id: 'S4', t0: 3.2, t1: 4.0, keys: [
+    { t: 3.2, pos: [2.0, 0.5, 0.7], look: [0.15, 1.0, -1.0], fov: 50, roll: -5 },
+    { t: 3.34, pos: [2.8, 0.7, 0.8], look: [0.15, 1.25, -3.0], fov: 52, roll: -2, e: 'quadOut' },
+    { t: 4.0, pos: [3.6, 1.05, 0.45], look: [0.05, 1.8, -5.0], fov: 54, roll: 0, e: 'sineOut' } ] },
+  // ---- S5 low side tracking of the dash and the grab; on the plant it pushes in to both faces (the music stops) ----
+  { id: 'S5', t0: 4.0, t1: 4.5, keys: [
+    { t: 4.0, pos: [2.9, 0.5, -0.55], look: { a: 'user', b: 'chest', o: [0, 0, -0.8] }, fov: 54, roll: 3 },
+    { t: 4.2, pos: [3.05, 0.62, -1.6], look: { a: 'user', b: 'chest', o: [0, 0.05, -0.6] }, fov: 52, roll: 1, e: 'sineOut' },
+    { t: 4.27, pos: [2.5, 1.95, -2.8], look: [0.12, 1.45, -2.95], fov: 36, roll: 0, e: 'quadOut' },
+    { t: 4.5, pos: [2.2, 1.9, -2.85], look: [0.12, 1.48, -2.95], fov: 32, roll: -1, e: 'sineInOut' } ] },
+  // ---- S6 her POV: the knee rises and the sole flies at the lens (cut on the contact) ----
+  { id: 'S6', t0: 4.5, t1: 4.8, keys: [
+    { t: 4.5, pos: { a: 'victim', b: 'eyes', rel: [0, 0.08, 0.12] }, look: { a: 'user', b: 'head', o: [0, -0.1, 0] }, fov: 72, roll: -4 },
+    { t: 4.68, pos: { a: 'victim', b: 'eyes', rel: [0, 0.08, 0.12] }, look: { a: 'user', b: 'chest', o: [0, -0.2, 0] }, fov: 80, roll: 0, e: 'sineInOut' },
+    { t: 4.8, pos: { a: 'victim', b: 'eyes', rel: [0, 0.08, 0.12] }, look: { a: 'user', b: 'pelvis', o: [0, -0.2, 0] }, fov: 86, roll: 6, e: 'quadIn' } ] },
+  // ---- S7 beside the cube: the impact, she flies at the camera's left INTO the face, is swallowed, the cube snaps shut ----
+  { id: 'S7', t0: 4.8, t1: 5.7, keys: [
+    { t: 4.8, pos: [2.7, 0.75, -3.75], look: { a: 'victim', b: 'chest', o: [0, -0.1, 0.35] }, fov: 50, roll: 4 },
+    { t: 5.12, pos: [2.75, 1.05, -4.7], look: { a: 'victim', b: 'chest', o: [0, 0, -0.1] }, fov: 50, roll: 1, e: 'quadOut' },
+    { t: 5.32, pos: [2.75, 1.15, -4.8], look: [0.3, 1.7, -5.4], fov: 50, roll: 0, e: 'sineInOut' },
+    { t: 5.7, pos: [3.2, 1.25, -5.0], look: [0.2, 1.4, -4.1], fov: 60, roll: 0, e: 'sineInOut' } ] },
+  // ---- S8 low from behind: he walks to the cube (tracking a little slower than him) ----
+  { id: 'S8', t0: 5.7, t1: 6.4, keys: [
+    { t: 5.7, pos: [1.35, 0.32, -0.55], look: [0.15, 1.3, -4.8], fov: 46, roll: 2 },
+    { t: 6.4, pos: [1.15, 0.4, -1.0], look: [0.15, 1.5, -5.2], fov: 44, roll: 0, e: 'sineInOut' } ] },
+  // ---- S9 the dive: from above his left shoulder straight into the face (the path stays left of and above him) ----
+  { id: 'S9', t0: 6.4, t1: 6.6, keys: [
+    { t: 6.4, pos: [-0.75, 2.25, -2.0], look: [-0.3, 1.8, -5.4], fov: 56, roll: 0 },
+    { t: 6.6, pos: [-0.55, 2.05, -5.3], look: [-0.45, 1.95, -8.0], fov: 108, roll: 8, e: 'expoIn' } ] },
+  { id: 'S10', t0: 6.6, t1: 8, keys: [
+    { t: 6.6, pos: { c: I, r: 3.6, h: 0.9, ang: 20 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 54 },
+    { t: 8, pos: { c: I, r: 3.0, h: 0.5, ang: 140 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 50, e: 'sineInOut' } ] },
+  { id: 'S11', t0: 8, t1: 8.8, keys: [
+    { t: 8, pos: { c: I, r: 2.5, h: 0.4, ang: 150 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 52 },
+    { t: 8.4, pos: { c: I, r: 2.4, h: 0.6, ang: 240 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 50, e: 'expoInOut' },
+    { t: 8.8, pos: { c: I, r: 2.5, h: 0.3, ang: 330 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 52, e: 'expoInOut' } ] },
+  { id: 'S12', t0: 8.8, t1: 9.6, keys: [
+    { t: 8.8, pos: { c: I, r: 0.6, h: 5.0, ang: 0 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 60 },
+    { t: 9.6, pos: { c: I, r: 0.6, h: 4.2, ang: 160 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 58, e: 'sineIn' } ] },
+  { id: 'S13', t0: 9.6, t1: 10.4, keys: [
+    { t: 9.6, pos: { c: I, r: 3.2, h: 0.6, ang: 0 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 56 },
+    { t: 10.4, pos: { c: I, r: 2.8, h: 0.2, ang: 400 }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 52, e: 'quadIn' } ] },
+  { id: 'S14', t0: 10.4, t1: 11.2, keys: [
+    { t: 10.4, pos: { a: 'victim', b: 'head', o: [0.9, 0.15, 0.9] }, look: { a: 'victim', b: 'head', o: [0, 0, 0] }, fov: 34 },
+    { t: 11.2, pos: { a: 'victim', b: 'head', o: [0.6, 0.1, 0.65] }, look: { a: 'victim', b: 'head', o: [0, 0, 0] }, fov: 30, e: 'sineIn' } ] },
+  { id: 'S15', t0: 11.2, t1: 12, keys: [
+    { t: 11.2, pos: add(I, [0.5, 2.4, 6.4]), look: add(I, [0, 0.9, 0]), fov: 52 },
+    { t: 11.6, pos: add(I, [0.4, 1.9, 5.0]), look: add(I, [0, 0.95, 0]), fov: 48, e: 'quartIn' },
+    { t: 12, pos: add(I, [0.2, 1.6, 4.4]), look: add(I, [0, 1.0, 0]), fov: 50, e: 'sineOut' } ] },
+  { id: 'S16', t0: 12, t1: 12.4, keys: [
+    { t: 12, pos: { a: 'victim', b: 'pelvis', o: [1.4, -1.6, 1.6] }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 50 },
+    { t: 12.4, pos: { a: 'victim', b: 'pelvis', o: [1.2, -2.0, 1.2] }, look: { a: 'victim', b: 'chest', o: [0, 0, 0] }, fov: 54, e: 'sineOut' } ] },
+  { id: 'S17', t0: 12.4, t1: 12.85, keys: [
+    { t: 12.4, pos: { a: 'victim', b: 'chest', o: [0.6, -1.4, 0.8] }, look: { a: 'user', b: 'chest', o: [0, 0, 0] }, fov: 60 },
+    { t: 12.85, pos: { a: 'victim', b: 'chest', o: [0.4, -1.1, 0.6] }, look: { a: 'user', b: 'chest', o: [0, 0, 0] }, fov: 70, e: 'expoIn' } ] },
+  { id: 'S18', t0: 12.85, t1: 13.4, keys: [
+    { t: 12.85, pos: [7.5, 0.5, 2.6], look: [0, 2.6, -6.6], fov: 58 },
+    { t: 13.4, pos: [7.0, 0.6, 2.0], look: [0, 1.0, -6.6], fov: 54, e: 'quadOut' } ] },
+  { id: 'S19', t0: 13.4, t1: 14.4, keys: [
+    { t: 13.4, pos: add(WORLD.landing, [3.2, 0.7, 2.6]), look: add(WORLD.landing, [0, 0.8, 0]), fov: 48 },
+    { t: 14.4, pos: add(WORLD.landing, [2.6, 0.6, 2.2]), look: add(WORLD.landing, [0, 0.8, 0]), fov: 46, e: 'sineOut' } ] },
+  { id: 'S20', t0: 14.4, t1: 16.6, keys: [
+    { t: 14.4, pos: { c: WORLD.landing, r: 3.8, h: 0.35, ang: 70 }, look: add(WORLD.landing, [0, 1.2, 0]), fov: 50 },
+    { t: 16.6, pos: { c: WORLD.landing, r: 3.4, h: 0.5, ang: 20 }, look: add(WORLD.landing, [0, 1.35, 0]), fov: 46, e: 'sineInOut' } ] },
+  { id: 'S21', t0: 16.6, t1: 18.2, keys: [
+    { t: 16.6, pos: { a: 'user', b: 'head', o: [0.55, 0.05, -1.3] }, look: { a: 'user', b: 'head', o: [0, 0.02, 0] }, fov: 34 },
+    { t: 18.2, pos: { a: 'user', b: 'head', o: [0.45, 0.05, -1.0] }, look: { a: 'user', b: 'head', o: [0, 0.02, 0] }, fov: 30, e: 'sineOut' } ] },
 ];
 
 export function shotAt(t) { return SHOTS.find(s => t >= s.t0 && t < s.t1) || SHOTS[SHOTS.length - 1]; }

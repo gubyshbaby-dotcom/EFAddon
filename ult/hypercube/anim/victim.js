@@ -50,17 +50,31 @@ const STARE = {
 const STARE_LATE = { ...STARE, torso: [-15, 60, 12], tp: [0, -2.2, 0.6], aL: [126, -30, 74], aR: [36, 64, 26] };
 const GRABBED_OVER = {
   torso: [8, -14, -9], tp: [0.2, -0.4, 3.8], head: [-20, 0, -7],
-  aL: aim('armL', [-0.45, 0.25, 1], 30), aLp: [0.6, 1.4, 3.0], aR: aim('armR', [-0.4, 0.15, 1], 30), aRp: [-0.4, 1.2, 2.8],
+  aL: aim('armL', [-0.4, -0.3, 1], 30), aLp: [0.6, 2.6, 2.6], aR: aim('armR', [-0.35, -0.35, 1], 30), aRp: [-0.4, 2.4, 2.4],
   lR: [34, 6, 14], lRp: [0.6, 3.6, 3.2], lL: [-30, -4, 16], lLp: [-1.0, 1.6, -2.4],
 };
 const GRABBED = { ...GRABBED_OVER, torso: [2, -8, -6], tp: [0, -1.0, 2.6], head: [-14, 0, -4], lR: [20, 6, 12], lRp: [0.8, 1.8, 1.6], lL: [-22, -6, 14], lLp: [-0.8, 1.2, -1.6] };
 const STRUGGLE = { ...GRABBED, torso: [-2, -4, -4], tp: [0, -1.2, 2.0], head: [-12, 0, 2] };
 const LEANBACK = { ...STRUGGLE, torso: [-14, -2, -6], tp: [0, -1.0, -0.4], head: [-18, 0, -2],
-  aL: aim('armL', [-0.3, 0.0, 1], 30), aLp: [0.6, 1.0, 2.4], aR: aim('armR', [0.4, -0.3, 0.85], 20), aRp: [0.2, 1.4, 1.6] };
+  aL: aim('armL', [0.9, -0.4, 0.05], 0), aLp: [-0.8, 2.2, 0.0], aR: aim('armR', [0.85, -0.5, 0.05], 0), aRp: [0.8, 2.0, 0.0] };
 const KICKED = {
   torso: [34, 0, 6], tp: [0, -0.8, -3.6], head: [34, 0, 8], aL: [74, 20, 40], aLp: [-0.4, 0.2, 5.2], aR: [64, 14, 34], aRp: [0.2, -0.4, 5.8],
   lR: [16, 6, 14], lRp: [0.6, 2.0, 1.8], lL: [6, -4, 16], lLp: [-0.8, 1.6, 1.2],
 };
+
+// carries (the reaction overshoots for 2 frames, then settles)
+const STARTLE_CARRY = { ...STARTLE_OVER, torso: [-24, -10, -9], tp: [0, 2.0, -2.8], head: [-24, 0, 8], aL: [166, 14, 44], aLp: [-0.6, 3.6, 0.6],
+  aR: [154, 30, 40], aRp: [0.4, 3.8, 0.0], lL: [30, 8, 14], lLp: [-0.6, 5.2, 1.0] };
+const FLINCH_CARRY = { ...FLINCH, torso: [-12, -38, -28], tp: [3.2, 0.0, -2.0], head: [-10, 0, 0], aL: [168, -10, 74], aLp: [-1.4, 3.4, 0.0],
+  aR: [52, 52, 44], aRp: [0.8, 2.4, 1.2], lL: [4, 6, 20], lLp: [-0.4, 3.8, -0.2] };
+const GRABBED_CARRY = { ...GRABBED_OVER, torso: [16, -18, -12], tp: [0.2, 0.0, 4.6], head: [-30, 0, -10],
+  aL: aim('armL', [-0.45, -0.15, 1], 30), aLp: [0.8, 2.8, 3.2], aR: aim('armR', [-0.4, -0.2, 1], 30), aRp: [-0.6, 2.6, 3.0],
+  lR: [44, 6, 16], lRp: [0.6, 4.4, 4.0], lL: [-38, -4, 18], lLp: [-1.0, 1.8, -3.0] };
+// flight flail: limbs whip in counter-phase while she flies
+const FLAIL_A = { aL: aim('armL', [0.9, 0.4, 0.3], 0), aLp: [-1.4, 2.0, 3.6], aR: aim('armR', [0.3, -0.4, 0.9], 0), aRp: [0.8, 0.0, 5.4],
+  lR: [80, 10, 40], lRp: [1.8, 4.8, 5.8], lL: [40, -8, 20], lLp: [-1.6, 2.6, 4.2], head: [14, 24, 14] };
+const FLAIL_B = { aL: aim('armL', [0.3, -0.3, 0.95], 0), aLp: [-1.0, 0.6, 4.8], aR: aim('armR', [0.9, 0.5, 0.2], 0), aRp: [1.4, 2.2, 3.4],
+  lR: [44, 8, 22], lRp: [1.4, 3.2, 4.6], lL: [84, -6, 44], lLp: [-2.0, 4.6, 5.6], head: [30, -10, 6] };
 
 const keys = [
   // ---- 0.00–1.20 wary bladed guard: breathing, one slow weight shift ----
@@ -68,14 +82,17 @@ const keys = [
   K(0.70, { ...GUARD_SHIFT }, 'sineInOut'),
   // ---- 1.25 SNAP startle at his charge (3 frames after it), half a step back; hold trembling ----
   ...snap(1.25, { ...GUARD_SHIFT, pos: [0, 0, Z0] }, { ...STARTLE_OVER, pos: [0, 0, Z0 - 0.06], shake: 0.6 }, null, { ez: { shake: 'linear' } }),
-  K(1.38, { ...STARTLED, pos: [0, 0, Z0 - 0.12] }, 'quadOut'),
+  K(1.283, { ...STARTLE_CARRY, pos: [0, 0, Z0 - 0.09] }, 'linear'),
+  K(1.38, { ...STARTLED, pos: [0, 0, Z0 - 0.12] }, 'cubicOut'),
   K(1.95, { ...STARTLED, torso: [-8, -15, -4], tp: [0, -0.2, -1.4], shake: 0.7 }, 'sineInOut'),
   // ---- 2.0–2.4 settles into a high wary guard; 2.6 leans in, peering at the glow; hold ----
   K(2.35, { ...WARY, shake: 0.4 }, 'sineInOut'),
   K(2.75, { ...PEER, shake: 0.35 }, 'sineInOut'),
   // ---- 3.25 SNAP flinch as the seed zips past her left; the head whips after it ----
-  ...snap(3.25, { ...PEER, torso: [16, -14, 7], tp: [0.9, -2.3, 1.8], look: USER_HEAD }, { ...FLINCH, look: SEED_PATH, shake: 0.8 }, FLINCH_HOLD,
-    { settle: 0.1, ez: { look: 'linear', shake: 'linear' } }),
+  ...snap(3.25, { ...PEER, torso: [16, -14, 7], tp: [0.9, -2.3, 1.8], look: USER_HEAD }, { ...FLINCH, look: SEED_PATH, shake: 0.8 }, null,
+    { ez: { look: 'linear', shake: 'linear' } }),
+  K(3.283, { ...FLINCH_CARRY }, 'linear'),
+  K(3.37, { ...FLINCH_HOLD }, 'cubicOut'),
   // ---- 3.50 the cube booms open behind her: SNAP hop-turn in the air, 3.62 lands staring at it; hold, trembling ----
   ...snap(3.50, { ...FLINCH_HOLD, pos: [0, 0, Z0 - 0.12], rot: [0, 180, 0], plant: 1, look: [1.6, 1.9, -6.6] },
     { ...TURN_AIR, pos: [0.06, 0.24, Z0 - 0.02], rot: [-6, 204, 0], plant: 0, look: CUBE_LOOK, shake: 1.2 }, null,
@@ -85,7 +102,8 @@ const keys = [
   K(4.15, { ...STARE_LATE, pos: [0.1, 0, Z0 + 0.38], rot: [0, 226, 0], shake: 1.0 }, 'sineInOut'),
   // ---- 4.17 SNAP grabbed: yanked round toward him by the collar, hands to his wrist; face to face, struggling ----
   K(4.183, { ...GRABBED_OVER, pos: [0.1, 0, Z0 + 0.48], rot: [0, 214, 0], look: USER_CLOSE, shake: 1.4 }, 'linear', { look: 'quadOut' }),
-  K(4.27, { ...GRABBED, pos: [0.08, 0, Z0 + 0.54], rot: [0, 208, 0] }, 'quadOut'),
+  K(4.217, { ...GRABBED_CARRY, pos: [0.09, 0, Z0 + 0.52], rot: [0, 210, 0] }, 'linear'),
+  K(4.30, { ...GRABBED, pos: [0.08, 0, Z0 + 0.54], rot: [0, 208, 0] }, 'cubicOut'),
   K(4.50, { ...STRUGGLE, shake: 1.2 }, 'sineInOut'),
   // ---- 4.5–4.78 sees the knee rise: leans away (slow) ----
   K(4.783, { ...LEANBACK, pos: [0.08, 0, Z0 + 0.52], rot: [0, 204, 0], plant: 1, shake: 1.0, lookW: 1, life: 0.9 }, 'sineInOut'),
@@ -98,6 +116,9 @@ const keys = [
     aL: aim('armL', [0.75, 0.25, 0.6], 0), aLp: [-1.2, 1.0, 4.4], aR: aim('armR', [0.6, -0.1, 0.8], 0), aRp: [0.8, 0.2, 5.4],
     lR: [58, 8, 30], lRp: [1.6, 4.0, 5.4], lL: [46, -6, 30], lLp: [-1.8, 3.0, 4.6] },
     'cubicOut', { plant: 'linear', aL: 'quadOut', lL: 'sineOut', aR: 'quadOut' }),
+  K(4.97, { ...FLAIL_A }, 'linear'),
+  K(5.03, { ...FLAIL_B }, 'linear'),
+  K(5.12, { ...FLAIL_A, head: [20, 20, 12] }, 'linear'),
   K(5.06, { rot: [-26, 200, 10], torso: [36, 10, 12], tp: [0, -0.8, -3.8], head: [24, 14, 12],
     aL: aim('armL', [0.7, 0.7, 0.2], 0), aLp: [-1.4, 2.2, 3.0], aR: aim('armR', [0.85, 0.15, 0.5], 0), aRp: [1.0, 1.0, 4.6],
     lR: [74, 4, 34], lRp: [1.6, 4.6, 5.6], lL: [66, -4, 38], lLp: [-1.8, 3.6, 5.0] }, 'sineInOut'),

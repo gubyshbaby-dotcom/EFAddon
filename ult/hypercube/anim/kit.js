@@ -228,6 +228,8 @@ export function bake(opts) {
     const k = keyAt(tr, r.t, r.ease);
     // aim: point the limb at the target first (twist = r.aim deg), the rest is the thrust out of the socket
     if (r.aim !== undefined) {
+      // aim from the socket (or a hint offset), not from an already thrust pivot (that would feed back on itself)
+      k[1] = (r.hint || [0, 0, 0]).slice();
       const ka = keyAt(r.limb, r.t, r.ease);
       for (let it = 0; it < 3; it++) {
         const { p } = rawPose(r.t);
@@ -262,6 +264,8 @@ export function bake(opts) {
   const n = Math.round((to - from) * FPS);
   for (let i = 0; i <= n; i++) times.push(from + i / FPS);
   for (const c of cuts) times.push(c - 0.0005);
+  // hit-stop ends rarely fall on a frame: sample the exact end so the dense track holds to it
+  for (const h of hits) if (h.stop > 0 && h.t >= from && h.t <= to) times.push(h.t + h.stop - 0.0002, h.t + h.stop);
   times.sort((a, b) => a - b);
   let headPrev = null;
   for (const t of times) {
