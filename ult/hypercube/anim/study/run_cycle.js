@@ -1,18 +1,20 @@
 // STUDY: our own combat run cycle (R6 style on the Minecraft rig). Not used by the ult.
-// "Hunter sprint" v2: a low, bounding battle sprint. Big lean, head up and locked on the target, every step a hop
-// that ends in a stamp; the arms throw hooks. Cycle 0.52 s (two steps), 8 blocks/s, a seamless loop.
-// ARMS (v2): the same idea, block = FOREARM (fist end at the fist), elbow 60–108° through the swing.
+// "Hunter sprint" v4: a bounding battle sprint. Lean 36–44°, chin down, every step a hop that ends in a stamp, big
+// counter-swinging arms. Cycle 0.52 s (two steps), 8 blocks/s, a seamless loop.
+// v4 (author: "arms through the head, small range of travel"): long stride (sole −17…+7 px around the torso centre,
+// helped by a pelvis swing of ±2 px), sprint arm pump (fist −11…+14 px, below the chin), no self-intersection
+// (tools/limbstats.mjs: SELF none).
 //
-// LEGS (v2, after "the legs are sticks"): every leg is a virtual thigh (6 px) + knee + shin (6 px), lib/vlimb.js.
+// LEGS (since v2, after "the legs are sticks"): every leg is a virtual thigh + knee + shin, lib/vlimb.js.
 // The 12-px block shows the SHIN: its bottom is the sole, it lies along the shin, so its top floats past the virtual
 // knee — that floating top IS the knee: in front of the belly on the knee drive, behind and up on the heel kick,
 // forward of the hip on the bent stance leg, at the hip socket only when the leg is straight.
-//   swing (FK): push-off → heel kick (thigh −40°, knee 112–118°: the block rises behind the butt, sole up) → tucked
-//     pass under the body (knee 116°, heel high) → the shin snaps vertical: high knee (thigh +82°, knee 78°: the block
-//     stands in front of the belly) → the shin swings out and paws down onto the ground.
+//   swing (FK): push-off, leg flung back (thigh −58°) → heel kick (knee 122–124°: the block rises behind the butt,
+//     sole up) → tucked pass under the body (knee 120°, heel high) → the shin snaps forward: high knee (thigh +96…102°,
+//     knee 86…62°: the block top up at the belly) → reach (shin +44°) → paws down onto the ground.
 //   v3 proportions (author: "limbs too far out"): thigh 3.5 px + shin 8.5, upper arm 2.5 + forearm 7.5, so the block
 //     top floats ≤ 6 px from the socket (≈ 2·thigh·sin(flex/2)).
-//   stance (IK): the sole is pinned (heel, then toe: it rolls, never skates); the knee lands at 16°, absorbs to 58°
+//   stance (IK): the sole is pinned (heel, then toe: it rolls, never skates); the knee lands at 14°, absorbs to 58°
 //     at mid-stance (the body sinks), extends to 14° for the push. Body height comes out of that.
 // Legs are in the ROOT frame (legSpace 'root'); the hip sockets are recomputed from the torso every key.
 // Everything is a function of the cycle phase; the keys of 4.2 s of running are generated below (120 keys/s).
@@ -33,7 +35,7 @@ const wrap = u => u - Math.floor(u);
 
 // torso: lean (dips into each landing, rises in the flight), twist about the spine (left shoulder drives forward
 // with the right foot), tilt over the stance foot, a little sway of the hips over the stance foot
-const leanStep = loopCurve([[0, 47], [0.2, 52], [0.42, 46], [0.7, 43]]);   // per STEP (period T/2)
+const leanStep = loopCurve([[0, 39], [0.2, 44], [0.42, 38], [0.7, 36]]);   // per STEP (period T/2)
 // the hips lag on the ground and surge in the air (px, along the run): the planted leg does not have to cover the whole step
 const surgeStep = loopCurve([[0, 2.0], [0.2, 0.4], [0.4, -1.2], [0.7, 0.4]]);
 const torsoAt = phi => {
@@ -44,31 +46,31 @@ const torsoAt = phi => {
   return { lean, twist, tilt, tp, ...torsoRot(lean, twist, tilt) };
 };
 
-// head: steady and looking ahead (hunting the target) — counters most of the body's lean, twist and tilt, a bit late
+// head: steady, chin down, eyes on the target — counters the twist and tilt, but only part of the lean (head tilted
+// back too far sinks its back edge into the shoulders)
 const headAt = (phi, torso) => {
   const tw = -24 * Math.cos(2 * Math.PI * (phi - 0.11)), tl = -7 * Math.cos(2 * Math.PI * (phi - 0.16));
-  const world = mul(ry(0.22 * tw * D), mul(rz(0.25 * tl * D), rx(-(4 + 3 * Math.cos(4 * Math.PI * (phi - 0.3))) * D)));
+  const world = mul(ry(0.22 * tw * D), mul(rz(0.25 * tl * D), rx(-(torso.lean - 18 + 3 * Math.cos(4 * Math.PI * (phi - 0.3))) * D)));
   return partAngles('head', mul(tr(torso.m), world));
 };
 
-// arms (v2): virtual upper arm (4 px) + elbow + forearm (6 px), lib/vlimb.js varm: the block shows the FOREARM, its fist
-// end at the fist, its top floating where the elbow is. Keys: [upper-arm pitch, yaw, roll] in the WORLD frame (the
-// silhouette is what I key, whatever the torso does), elbow flexion, shoulder thrust [x, y, z] px (torso frame).
-// Phase 0 = the same-side foot lands. A loop, not a pendulum: the arm drives forward folded and close, the elbow
-// snaps open at the front like a hook-punch and closes again, then the arm is ripped back round the OUTSIDE (wide
-// flare) and the elbow flicks open once more at the back.
+// arms (v4): sprint pump. Virtual upper arm (2.5 px) + elbow + forearm (7.5 px), lib/vlimb.js varm: the block shows
+// the FOREARM, fist end at the fist. Keys: [upper-arm pitch, yaw, roll] in the WORLD frame, elbow flexion, shoulder
+// offset [x, y, z] px (torso frame). Phase 0 = the same-side foot lands: the arm is flung back behind the body, nearly
+// straight and flared; it pumps forward folding (elbow ~90° through the bottom, fist by the hip) and punches out in
+// front of the chest (fist below the chin, ≥ 12 px ahead of the torso), then rips back. On the back swing the shoulder
+// drops and widens a little so the arm never sinks into the head.
 const ARM = loopCurve([
-  [0.03, [-70, -4, 40, 80, 0.2, 0, -0.6]],   // back extreme: elbow flicks open a little, flared out
-  [0.10, [-64, -2, 34, 98, 0.2, 0, -0.5]],
-  [0.19, [-30, 6, 18, 104, 0, 0, -0.1]],      // drive starts, folded tight
-  [0.26, [15, 14, 12, 108, 0, 0.2, 0.3]],     // through the bottom: fist by the hip, elbow 108°
-  [0.34, [62, 26, 14, 100, -0.1, 0.3, 0.7]],
-  [0.43, [96, 32, 22, 62, -0.2, 0.3, 1.0]],   // hook-punch: the elbow snaps open, fist thrust forward and in
-  [0.50, [96, 28, 28, 76, -0.2, 0.3, 0.8]],
-  [0.57, [82, 22, 44, 100, 0, 0.2, 0.4]],     // recoil: closes and opens out
-  [0.66, [38, 8, 72, 106, 0.2, 0.2, 0.1]],    // ripped back round the outside, wide
-  [0.76, [-20, -6, 78, 98, 0.2, 0.1, -0.2]],
-  [0.88, [-58, -6, 54, 100, 0.2, 0, -0.5]],
+  [0.00, [-100, -4, 30, 24, 1.1, -1.2, -1.2]],  // back extreme: flung out behind, nearly straight, flared
+  [0.08, [-92, -4, 40, 36, 1.1, -1.2, -1.0]],
+  [0.18, [-55, 0, 26, 70, 0.4, -0.2, -0.4]],   // pumping forward, the elbow folds
+  [0.27, [-5, 4, 12, 92, 0, 0.2, 0.2]],       // through the bottom: fist by the hip, tight
+  [0.37, [28, 8, 10, 78, 0, 0.2, 0.8]],
+  [0.47, [38, 10, 12, 58, 0, 0.2, 1.2]],      // forward extreme: fist punched out in front of the chest
+  [0.55, [34, 8, 14, 68, 0, 0.2, 1.0]],
+  [0.65, [2, 2, 18, 86, 0, 0.1, 0.2]],        // ripped back, folding
+  [0.78, [-50, -2, 30, 62, 0.6, -0.5, -0.6]],
+  [0.90, [-88, -4, 34, 34, 1.0, -1.1, -1.0]],
 ]);
 
 // legs, leg phase psi: 0 = touchdown, S = toe-off. Swing keys: virtual thigh pitch (root frame) and knee flexion.
@@ -77,10 +79,10 @@ const SIDE = { legR: 'R', legL: 'L' };
 const LEG_T = 3.5, ARM_U = 2.5, LEG_S = 12 - LEG_T;
 const hipToSole = knee => Math.sqrt(LEG_T * LEG_T + LEG_S * LEG_S + 2 * LEG_T * LEG_S * Math.cos(knee * Math.PI / 180));
 const LEGS = { legR: 0, legL: 0.5 };
-const TD_THIGH = 28, TD_KNEE = 16;                       // the touchdown pose (shin 12° forward: the heel lands first)
+const TD_THIGH = 36, TD_KNEE = 14;                       // the touchdown pose (shin 12° forward: the heel lands first)
 const STANCE_KNEE = openCurve([[0, TD_KNEE], [0.45, 58], [1, 14]], 160, -60);   // over the stance 0..1: land, absorb, push
-const SWING_THIGH = [[0.26, -34], [0.32, -40], [0.38, -36], [0.44, -22], [0.50, -4], [0.56, 12], [0.62, 28], [0.67, 46], [0.71, 70], [0.75, 88], [0.81, 88], [0.88, 68], [0.95, 42]];
-const SWING_KNEE = [[0.26, 55], [0.32, 90], [0.38, 112], [0.44, 118], [0.50, 120], [0.56, 120], [0.62, 120], [0.67, 118], [0.71, 104], [0.75, 82], [0.81, 62], [0.88, 42], [0.95, 20]];
+const SWING_THIGH = [[0.27, -58], [0.33, -50], [0.40, -30], [0.47, -12], [0.54, 6], [0.60, 26], [0.66, 48], [0.71, 74], [0.77, 96], [0.84, 102], [0.90, 90], [0.96, 64]];
+const SWING_KNEE = [[0.27, 36], [0.33, 80], [0.40, 122], [0.47, 124], [0.54, 120], [0.60, 120], [0.66, 118], [0.71, 102], [0.77, 86], [0.84, 62], [0.90, 46], [0.96, 26]];
 const SWING_ROLL = loopCurve([[0.0, 0], [0.3, 3], [0.42, 8], [0.6, 10], [0.72, 6], [0.9, 2]]);
 const KNEE_DIR = [0, 0, 1];                              // knees point straight ahead
 const kneeStance = u => STANCE_KNEE(u);
@@ -88,7 +90,13 @@ const kneeStance = u => STANCE_KNEE(u);
 const posToSocket = (leg, pos) => [BODY_HIP[leg][0] + pos[0], BODY_HIP[leg][1] + pos[1], -pos[2]];   // track → three-axes px
 const lowOf = (leg, res) => legLow(leg, posToSocket(leg, res.pos), res.ang);
 const edgesOf = (leg, res) => soleEdges(leg, posToSocket(leg, res.pos), res.ang);   // three axes (z back), px
-const hipAt = (leg, phi) => { const tor = torsoAt(phi); return hipSocket(SIDE[leg], tor.angles, tor.tp); };   // root frame, z fwd
+// pelvis swing (px along the run): the hip of the reaching leg comes forward, the pushing one goes back — the stride
+// gets longer without the leg block drifting from its socket
+const PELVIS = loopCurve([[0, 1.4], [0.1, 0.6], [0.19, -1.2], [0.28, -2.2], [0.4, -1.4], [0.6, 0], [0.8, 1.2], [0.9, 1.6]]);
+const hipAt = (leg, phi) => {
+  const tor = torsoAt(phi), h = hipSocket(SIDE[leg], tor.angles, tor.tp);
+  return [h[0], h[1], h[2] + PELVIS(wrap(phi - LEGS[leg]))];
+};   // root frame, z fwd
 const thighOf = res => { const h = res.hip, k = res.knee; return Math.atan2(k[2] - h[2], -(k[1] - h[1])) * 180 / Math.PI; };
 
 // ---- stance solve: the sole is pinned (heel, then toe), the knee follows its curve, the body height comes out ----
